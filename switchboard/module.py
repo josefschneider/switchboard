@@ -14,11 +14,12 @@ def determine_if_class_method(frames):
     # defined in a class or is standalone. See:
     # http://stackoverflow.com/questions/8793233/python-can-a-decorator-determine-if-a-function-is-being-defined-inside-a-class
     if len(frames) > 2:
-	maybe_class_frame = frames[2]
-	statement_list = maybe_class_frame[4]
-	first_statment = statement_list[0]
-	if first_statment.strip().startswith('class '):
-	    return True
+        maybe_class_frame = frames[2]
+        statement_list = maybe_class_frame[4]
+        if statement_list:
+            first_statment = statement_list[0]
+            if first_statment.strip().startswith('class '):
+                return True
 
     return False
 

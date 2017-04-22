@@ -6,11 +6,11 @@ from setuptools.command.test import test as TestCommand
 
 
 class PyTest(TestCommand):
-    def fnialize_options(self):
+    def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = [
-                '--doctest-modules', '--verbose',
-                './switchboard', './tests'
+            '--doctest-modules', '--verbose',
+            './switchboard', './tests'
         ]
         self.test_suite = True
 
@@ -20,9 +20,17 @@ class PyTest(TestCommand):
 
 
 tests_require = [
-        'pytest',
-        'mock'
+    'pytest',
+    'mock'
 ]
+
+
+install_requires = [
+    'requests',
+    'bottle',
+    'termcolor'
+]
+
 
 setup(
     name='switchboard',
@@ -34,5 +42,6 @@ setup(
         ],
     },
     tests_require=tests_require,
+    install_requires=install_requires,
     cmdclass={'test': PyTest}
 )

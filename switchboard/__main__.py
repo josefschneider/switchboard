@@ -7,7 +7,7 @@ import argparse
 import sys
 
 from switchboard.config import SwitchboardConfig
-from switchboard.switchboard import SwitchboardEngine
+from switchboard.engine import SwitchboardEngine
 from switchboard.cli import SwitchboardCli
 
 

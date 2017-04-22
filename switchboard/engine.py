@@ -22,7 +22,7 @@ class SwitchboardEngine:
         # The switchboard config object
         self.config = config
 
-        # Map of host URL -> _Host object
+        # Map of host URL -> Host object
         self.hosts = {}
 
         # Map of module name -> _Module object
@@ -99,7 +99,7 @@ class SwitchboardEngine:
 
         # And now add all the 'new' host information
         self.devices.update(new_devices)
-        self.hosts[host_url] = _Host(host_url, new_devices.keys())
+        self.hosts[host_url] = Host(host_url, new_devices.keys())
 
         # Load the initial values
         self._update_devices_values()
@@ -239,7 +239,7 @@ class SwitchboardEngine:
 
 
 
-class _Host:
+class Host:
     def __init__(self, url, devices):
         self.url = url
         self.connected = False

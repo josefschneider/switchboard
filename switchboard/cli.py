@@ -3,6 +3,7 @@ import cmd
 import copy
 
 from threading import Thread
+from termcolor import colored
 
 def AutoComplete(text, line, options):
     ''' Generic auto-complete function to make it easier to write
@@ -38,6 +39,8 @@ class SwitchboardCli(cmd.Cmd, object):
         self._config = config
         self._swb_thread = None
 
+        self.prompt = colored('(stopped) ', 'red')
+
         # Pre-load the possible config variables for auto-completion
         self._config_vars = { }
         for key, opt in self._config.CONFIG_OPTS.items():
@@ -47,6 +50,13 @@ class SwitchboardCli(cmd.Cmd, object):
     def run(self):
         ''' Blocking cmd input loop '''
         self.cmdloop()
+
+    def postcmd(self, stop, line):
+        if self._swb.running:
+            self.prompt = colored('(running) ', 'green')
+        else:
+            self.prompt = colored('(stopped) ', 'red')
+        return stop
 
     def _stop_switchboard(self):
         if self._swb_thread:
@@ -123,8 +133,8 @@ class SwitchboardCli(cmd.Cmd, object):
                 print('No hosts registered')
             else:
                 print('Hosts:')
-                for host, devices in self._swb.hosts.items():
-                    yield host, devices
+                for host, host_obj in self._swb.hosts.items():
+                    yield host, host_obj.devices
 
         if not line:
             print('Empty list argument')
@@ -138,15 +148,15 @@ class SwitchboardCli(cmd.Cmd, object):
             for host, devices in iter_hosts():
                 print('{}'.format(host))
                 for device in devices:
-                    print('\t{}'.format(device.name))
+                    print('\t{}'.format(device))
 
         elif line.lower() in 'values':
             for host, devices in iter_hosts():
                 print('{}'.format(host))
-                input_devices = filter(lambda d: d.is_input, devices)
+                input_devices = filter(lambda d: d.is_input, self._swb.devices.values())
                 if input_devices:
-                    for device in input_devices:
-                        print('\t{}: {}'.format(device.name, device.value))
+                    for device_obj in input_devices:
+                        print('\t{}: {}'.format(device_obj.name, device_obj.value))
                 else:
                     print('\tNo input devices')
 
