@@ -22,7 +22,7 @@ class SwitchboardEngine:
         # The switchboard config object
         self.config = config
 
-        # Map of host URL -> Host object
+        # Map of host alias -> Host object
         self.hosts = {}
 
         # Map of module name -> _Module object
@@ -41,26 +41,46 @@ class SwitchboardEngine:
 
         print("Initialising switchboard config...")
 
-        for host_url in self.config.get('hosts'):
+        for host_url, host_alias in self.config.get('hosts'):
             try:
-                self.upsert_host(host_url)
+                self._upsert_host(host_url, host_alias)
             except Exception as e:
-                sys.exit('Error adding host {}: {}'.format(host_url, e))
+                sys.exit('Error adding host {}({}): {}'.format(host_alias, host_url, e))
+
+        # TODO load the rest of the configs
 
 
-    def upsert_host(self, host_url):
+    def add_host(self, host_url, host_alias):
+        print('Adding host {}({})'.format(host_alias, host_url))
+
+        if host_alias in self.hosts:
+            raise Exception('Host with alias "{}" already exists'.format(host_alias))
+
+        for host in self.hosts.values():
+            if host.url == host_url:
+                raise Exception('Host with URL "{}" already exists with'
+                        'alias {}'.format(host_url, host.alias))
+
+        self._upsert_host(host_url, host_alias)
+
+
+    def update_host(self, host_alias):
+        if not host_url.startswith('http://'):
+            host_url = 'http://' + host_url
+
+        print('Updating host {}({})'.format(host_alias, host_url))
+
+        if not host_alias in self.hosts:
+            raise Exception('Unknown host alias "{}"'.format(host_alias))
+
+        self._upsert_host(self.hosts[host_alias].url, host_alias)
+
+
+    def _upsert_host(self, host_url, host_alias):
         ''' Insert or update a Switchboard host. This method throws
             an exception if any issues are encountered and complies to
             the strong exception guarantee (i.e., if an error is raised
             SwitchboardEngine will keep running without changing state) '''
-
-        if not host_url.startswith('http://'):
-            host_url = 'http://' + host_url
-
-        if host_url in self.hosts:
-            print('Updating host {}'.format(host_url))
-        else:
-            print('Adding host {}'.format(host_url))
 
         # Get the info of all the devices
         info_url = host_url + '/devices_info'
@@ -73,7 +93,10 @@ class SwitchboardEngine:
         new_devices = {}
 
         for device in host_devices:
-            name = device['name']
+            # Preprend the host name to the device name so that identical
+            # devices on different hosts have different names
+            name = '{}.{}'.format(host_alias, device['name'])
+            device['name'] = name
 
             # Check we don't have duplicate devices on this host
             if name in new_devices:
@@ -99,7 +122,7 @@ class SwitchboardEngine:
 
         # And now add all the 'new' host information
         self.devices.update(new_devices)
-        self.hosts[host_url] = Host(host_url, new_devices.keys())
+        self.hosts[host_alias] = Host(host_url, host_alias, new_devices.keys())
 
         # Load the initial values
         self._update_devices_values()
@@ -156,7 +179,10 @@ class SwitchboardEngine:
 
 
     def set_remote_device_value(self, device, value):
-        payload = json.dumps({'name': device.name, 'value': str(value)})
+        # Stip the host alias from the device name so that the remote
+        # host recognises its local device
+        local_device_name = device.name[device.name.find('.') + 1:]
+        payload = json.dumps({'name': local_device_name, 'value': str(value)})
         r = requests.put(device.host_url + '/device_set', data=payload)
         try:
             response = r.json()
@@ -197,7 +223,7 @@ class SwitchboardEngine:
             else:
                 host.on_no_error()
                 for device_json in values_json['devices']:
-                    self._update_device_value(device_json)
+                    self._update_device_value(host.alias, device_json)
 
 
     def _check_values_json_formatting(self, url, values_json):
@@ -218,30 +244,32 @@ class SwitchboardEngine:
                         url, device_json['name'])
 
 
-    def _update_device_value(self, device_json):
+    def _update_device_value(self, host_alias, device_json):
         ''' Given a correctly formatted json encoded device value,
             update the local device object '''
 
-        device = self.devices[device_json['name']]
+        global_dev_name = '{}.{}'.format(host_alias, device_json['name'])
+        device = self.devices[global_dev_name]
 
         if 'error' in device_json:
             if not device.error:
                 print('Device {} has reported an error: {}'.format(
-                    device_json['name'], device_json['error']))
+                    global_dev_name, device_json['error']))
             device.error = device_json['error']
 
         elif 'value' in device_json:
             if device.error:
                 print('Device {} no longer reporting error'.format(
-                    device_json['name']))
+                    global_dev_name))
                 device.error = None
             device.update_value(device_json['value'])
 
 
 
 class Host:
-    def __init__(self, url, devices):
+    def __init__(self, url, alias, devices):
         self.url = url
+        self.alias = alias
         self.connected = False
         self.error = None
         self.devices = set(devices)

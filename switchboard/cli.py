@@ -1,6 +1,5 @@
-
+''' Command Line Input module for Switchboard '''
 import cmd
-import copy
 
 from threading import Thread
 from termcolor import colored
@@ -19,7 +18,7 @@ def AutoComplete(text, line, options):
     try:
         for part in parts[1:idx]:
             options = options[part]
-    except:
+    except Exception:
         return []
 
     return [ opt_list for opt_list in options if opt_list.startswith(text) ]
@@ -27,6 +26,8 @@ def AutoComplete(text, line, options):
 
 class SwitchboardCli(cmd.Cmd, object):
     def lock_switchboard(f):
+        ''' Decorator for functions that need to synchonrise with the
+            Switchboard engine before executing '''
         def wrapper(self, line):
             with self._swb.lock:
                 f(self, line)
@@ -66,21 +67,49 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def help_addhost(self):
         print('Usage:')
-        print('addhost [host]       add or update the given host')
+        print('addhost [host] [alias]   add host and assign alias to it')
 
     @lock_switchboard
     def do_addhost(self, line):
+        parts = line.split()
+        if len(parts) != 2:
+            print('"addhost" command expects two parameters')
+            self.help_addhost()
+            return
+
+        (host_url, host_alias) = parts
+
+        if not host_url.startswith('http://'):
+            host_url = 'http://' + host_url
+
         if not self._catch_except:
-            self._swb.upsert_host(line)
+            self._swb.add_host(host_alias, host_url)
+            self._config.add_host(host_alias, host_url)
+        else:
+            try:
+                self._swb.add_host(host_alias, host_url)
+                self._config.add_host(host_alias, host_url)
+            except Exception as e:
+                print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
+
+
+    def help_updatehost(self):
+        print('Usage:')
+        print('updatehost [host alias]  update the given host')
+
+    @lock_switchboard
+    def do_updatehost(self, line):
+        if not self._catch_except:
+            self._swb.update_host(line)
             self._config.add_host(line)
         else:
             try:
-                self._swb.upsert_host(line)
+                self._swb.update_host(line)
                 self._config.add_host(line)
             except Exception as e:
-                print('Could not add host "{}": {}'.format(line, e))
+                print('Could not update host "{}": {}'.format(line, e))
 
-    def complete_addhost(self, text, line, begidx, endidx):
+    def complete_updatehost(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.hosts)
 
 
@@ -145,15 +174,16 @@ class SwitchboardCli(cmd.Cmd, object):
                 print('\t{}'.format(host))
 
         elif line.lower() in 'devices':
-            for host, devices in iter_hosts():
-                print('{}'.format(host))
+            for name, devices in iter_hosts():
+                print('{}'.format(name))
                 for device in devices:
                     print('\t{}'.format(device))
 
         elif line.lower() in 'values':
-            for host, devices in iter_hosts():
-                print('{}'.format(host))
-                input_devices = filter(lambda d: d.is_input, self._swb.devices.values())
+            for name, devices_names in iter_hosts():
+                print('{}'.format(name))
+                devices = [ self._swb.devices[d] for d in devices_names ]
+                input_devices = filter(lambda d: d.is_input, devices)
                 if input_devices:
                     for device_obj in input_devices:
                         print('\t{}: {}'.format(device_obj.name, device_obj.value))
@@ -212,7 +242,7 @@ class SwitchboardCli(cmd.Cmd, object):
         print('Usage:')
         print('set [device] [value]    set given device to given value')
         for key, opt in self._config_vars.items():
-            print('get {:<19} {}'.format(key + " [value]", opt['desc']))
+            print('set {:<19} {}'.format(key + " [value]", opt['desc']))
 
     @lock_switchboard
     def do_set(self, line):
@@ -254,7 +284,7 @@ class SwitchboardCli(cmd.Cmd, object):
             print('Unable to start switchboard as poll_period is not set')
             return
 
-        if self._swb_thread == None:
+        if self._swb_thread is None:
             self._swb.running = True
             self._swb_thread = Thread(target=self._swb.run)
             self._swb_thread.start()

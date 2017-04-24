@@ -45,13 +45,20 @@ class SwitchboardDevice(object):
             self.driving_module = None
 
         def set_value(self, value):
+            self._device.last_set_value = value
             self._device.set_value(value)
 
 
     def __init__(self, name):
         self.name = name
+
+        # Used by input devices
         self.value = None
         self.previous_value = None
+
+        # Used by output devices
+        self.last_set_value = None
+
         self.is_input = False
         self.is_output = False
 
@@ -76,12 +83,13 @@ class SwitchboardDevice(object):
 
 
     def update_value(self, value):
+        ''' To be called by the Switchboard engine when an input is updated'''
         self.previous_value = self.value
         self.value = value
 
 
     def set_value(self, value):
-        ''' This method is expected to be overridden '''
+        ''' This method is expected to be overridden by the output device'''
         raise NotImplementedError('set_value needs to be overridden')
 
 
@@ -125,20 +133,20 @@ class RESTDevice(SwitchboardDevice):
         self._set_value_callback = set_value_callback
 
         if 'i' in device_name_suffix:
-            if device['readable'] == False:
+            if not device['readable']:
                 raise Exception('Invalid device name: {} is an input (\'i\' at the end of the device name) but is not listed as readable'.format(device['name']))
             self.is_input = True
             self.input_signal = self.get_input_signal()
 
         if 'o' in device_name_suffix:
-            if device['writeable'] == False:
+            if not device['writeable']:
                 raise Exception('Invalid device name: {} is an output (\'o\' at the end of the device name) but is not listed as writeable'.format(device['name']))
             self.is_output = True
             self.output_signal = self.get_output_signal()
 
 
     def set_value(self, value):
-        if self.is_output == False:
+        if not self.is_output:
             raise NotImplementedError('Cannot call set_value on {} as it is not an output device'.format(self.name))
 
         self._set_value_callback(self, value)

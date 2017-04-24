@@ -10,6 +10,12 @@ def is_float(string):
     except:
         return False
 
+# Make input function python2 and 3 compatible
+try:
+    input = raw_input
+except NameError:
+    pass
+
 
 class SwitchboardConfig:
     # Different configuration options together with their attributes:
@@ -59,7 +65,7 @@ class SwitchboardConfig:
         ''' Get a string config option of name <key>. If no such option
             exists return None '''
 
-        if key in self.configs and isinstance(self.configs[key], str):
+        if key in self.configs:
             return self.configs[key]
 
         return None
@@ -84,8 +90,8 @@ class SwitchboardConfig:
         return 'Invalid config option "{}"'.format(key)
 
 
-    def add_host(self, host):
-        self.configs['hosts'].append(host)
+    def add_host(self, host, alias):
+        self.configs['hosts'].append([ host, alias ])
         self._save_config()
 
 
@@ -140,7 +146,7 @@ class SwitchboardConfig:
             user-visible string config options and save to config file '''
 
         for key, opt in self.CONFIG_OPTS.items():
-            if opt.has_key('desc'):
+            if 'desc' in opt:
                 self._get_input(key, opt)
 
         self._save_config()
@@ -150,7 +156,7 @@ class SwitchboardConfig:
         ''' Reusable function to get config value, test it and store it '''
 
         while True:
-            value = raw_input('Please enter {}: '.format(opt['desc']))
+            value = input('Please enter {}: '.format(opt['desc']))
 
             if opt['test'](value):
                 self.configs[key] = value

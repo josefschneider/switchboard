@@ -82,7 +82,8 @@ def test_rest_output_device():
     assert(not hasattr(dev, 'input_signal'))
     assert(dev.is_output == True)
     assert(hasattr(dev, 'output_signal'))
-    dev.set_value(456)
+    dev.output_signal.set_value(456)
+    assert(dev.last_set_value == 456)
     callback.assert_called_with(dev, 456)
 
 
