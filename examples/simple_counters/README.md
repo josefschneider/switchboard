@@ -6,6 +6,7 @@ This simple counter example shows the bare minimum required to get a Switchboard
 
 (Make sure to have switchboard installed!)
 
+* Open three windows and cd to the switchboard/examples/simple_counters directory
 * In one terminal run: `./client1.py`
 * In another run: `./client2.py`
 * In a third terminal launch Switchboard pointing it to the config file: `switchboard -c settings.json`
