@@ -205,7 +205,7 @@ class SwitchboardEngine:
             if 'error' in response:
                 print('Error: ' + response['error'])
         except Exception as e:
-            print('Exception "{}": {}'.format(e, r.content))
+            print('Exception "{}" when setting the output value of {}: {}'.format(e, device.name, r.content))
 
 
     def _check_modules(self):

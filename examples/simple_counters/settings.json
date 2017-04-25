@@ -1,0 +1,1 @@
+{"poll_period": "1", "hosts": [["http://127.0.0.1:4000", "client1"], ["http://127.0.0.1:4001", "client2"]], "modules": ["test_module.module"]}

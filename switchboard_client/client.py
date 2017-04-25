@@ -12,7 +12,8 @@ class _SwitchboardDevice(object):
         self.name = name
         self.read_callback = read_callback
         self.write_callback = write_callback
-        self.value = read_callback()
+        if self.read_callback:
+            self.value = read_callback()
         self.readable = readable
         self.writeable = writeable
 
@@ -91,17 +92,18 @@ class SwitchboardDeviceStore(object):
 
 
 class SwitchboardClient(SwitchboardDeviceStore):
-    def __init__(self, host, port):
+    def __init__(self, host, port, quiet=True):
         super(SwitchboardClient, self).__init__()
         self._host = host
         self._port = port
+        self._quiet = quiet
         self._app = Bottle()
         self._app.route('/devices_info', method='GET', callback=self._devices_info)
         self._app.route('/devices_value', method='GET', callback=self._devices_value)
         self._app.route('/device_set', method='PUT', callback=self._device_set)
 
     def run(self):
-        self._app.run(host=self._host, port=self._port, debug=False, quiet=True)
+        self._app.run(host=self._host, port=self._port, debug=False, quiet=self._quiet)
 
     def _devices_info(self):
         response.headers['Content-Type'] = 'application/json'
