@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang='en'>
+    <head>
+        <meta charset='utf-8' />
+        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+        <title>Switchboard</title>
+
+		<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css' integrity='sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u' crossorigin='anonymous'>
+		<!-- Optional Bootstrap theme -->
+		<link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css' integrity='sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp' crossorigin='anonymous'>
+
+    </head>
+    <body>
+        <div class='container'>
+            <div class='page-header'>
+                <h2>SWB Dashboard</h2>
+            </div>
+        </div>
+
+        <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js'></script>
+		<script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js' integrity='sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa' crossorigin='anonymous'></script>
+
+        <script type='text/javascript'>
+			var socket = null
+            $(document).ready(function() {
+				var addr = 'ws://' + document.domain + ':' + location.port + '/websocket'
+				socket = new WebSocket(addr);
+
+				socket.onerror = function(event) {
+					console.log('Error detected: ' + event);
+				}
+
+				socket.onclose = function() {
+					socket = null;
+					console.log('socket closed')
+				}
+
+				socket.onopen = function(event) {
+					console.log('socket open')
+				}
+
+				socket.onmessage = function(msg) {
+                    console.log('received message: ' + msg.data)
+                    var data = JSON.parse(msg.data)
+                    switch (data.command) {
+                        case 'update_fields':
+                            for (var i = 0; i < data.fields.length; i++) {
+                                var update = data.fields[i]
+                                document.getElementById(update.device).innerHTML=update.value
+                            }
+                            break
+						case 'update_table':
+							loadTable('device_table', data.table)
+                            break
+                        default:
+                            console.log('Unkown command ' + data.command);
+                    }
+				}
+            });
+
+    		function loadTable(tableId, table_data) {
+    		    var rows = '';
+    		    $.each(table_data, function(index, host_info) {
+    		        var row = '<tr><td class="col-xs-2">' + host_info.host_alias + '</td>'
+                    row += '<td class="col-xs-3">' + host_info.host_url + '</td>'
+                    row += '<td class="col-xs-7"><table class=\'table table-bordered\'>'
+
+    		        $.each(host_info.devices, function(index, device) {
+                        row += '<tr>'
+    		            row += '<td class="col-xs-4">' + device.name + '</td>';
+    		            row += '<td class="col-xs-3" id=' + device.name + '>' + device.value + '</td>';
+                        row += '</tr>'
+    		        });
+
+    		        rows += row + '</table></td></tr>';
+    		    });
+                console.log(rows)
+    		    $('#' + tableId + ' tbody').html(rows);
+    		}
+
+        </script>
+
+        <div class='row col-md-12'>
+            <table id='device_table' class='table table-striped'>
+                <thead>
+                    <tr>
+                        <th>Host</th>
+                        <th>Host URL</th>
+                        <th>Devices Info</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+
+    </body>
+</html>

@@ -27,17 +27,12 @@ class SwitchboardConfig:
     #       value limits
     # * type: the type of the option
     CONFIG_OPTS = {
-            'admin_email': {
-                'desc': 'administrator email address',
-                'test': lambda x: x == '' or '@' in parseaddr(x)[1],
-                'limit': 'empty or a valid email address',
-                'type': str
-            },
             'poll_period': {
                 'desc': 'polling period in seconds',
                 'test': lambda x: is_float(x) and float(x) > 0.1,
                 'limit': 'a float > 0.1',
-                'type': str
+                'type': str,
+                'default': ('1')
             },
             'hosts': {
                 'test': lambda x: isinstance(x, list),
@@ -58,7 +53,10 @@ class SwitchboardConfig:
         # Create an empty config to be used if no config file is provided
         self.configs = {}
         for key, opt in self.CONFIG_OPTS.items():
-            self.configs[key] = opt['type']()
+            args = ()
+            if 'default' in opt:
+                args = (opt['default'])
+            self.configs[key] = opt['type'](*args)
 
 
     def get(self, key):
@@ -92,6 +90,11 @@ class SwitchboardConfig:
 
     def add_host(self, host, alias):
         self.configs['hosts'].append([ host, alias ])
+        self._save_config()
+
+
+    def add_module(self, module):
+        self.configs['modules'].append(module)
         self._save_config()
 
 

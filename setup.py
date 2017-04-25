@@ -29,7 +29,8 @@ tests_require = [
 install_requires = [
     'requests',
     'bottle',
-    'termcolor'
+    'termcolor',
+    'bottle_websocket'
 ]
 
 
@@ -37,6 +38,7 @@ setup(
     name='switchboard',
     version='0.1.0',
     packages=find_packages(),
+    package_data={ 'switchboard': ['*.html'] },
     entry_points={
         'console_scripts': [
             'switchboard = switchboard.__main__:main',

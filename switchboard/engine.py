@@ -5,14 +5,14 @@ import json
 import importlib
 import requests
 
-from threading import Lock
+from threading import Lock, Thread
 
 from switchboard.device import RESTDevice
 from switchboard.module import SwitchboardModule
 
 
 class SwitchboardEngine:
-    def __init__(self, config):
+    def __init__(self, config, iodata):
         # Determines if the SwitchboardEngine logic is running or not
         self.running = False
 
@@ -21,6 +21,9 @@ class SwitchboardEngine:
 
         # The switchboard config object
         self.config = config
+
+        # Object used to encode and disseminate the consecutive IO state
+        self._iodata = iodata
 
         # Map of host alias -> Host object
         self.hosts = {}
@@ -33,6 +36,11 @@ class SwitchboardEngine:
 
         # Lock used to synchronise switchboard with its settings
         self.lock = Lock()
+
+        # Startup the Switchboard thread
+        self._swb_thread = Thread(target=self.run)
+        self._swb_thread.daemon = True
+        self._swb_thread.start()
 
 
     def init_config(self):
@@ -47,7 +55,11 @@ class SwitchboardEngine:
             except Exception as e:
                 sys.exit('Error adding host {}({}): {}'.format(host_alias, host_url, e))
 
-        # TODO load the rest of the configs
+        for module in self.config.get('modules'):
+            try:
+                self.upsert_switchboard_module(module)
+            except Exception as e:
+                sys.exit('Error adding module {}: {}'.format(module, e))
 
 
     def add_host(self, host_url, host_alias):
@@ -127,6 +139,9 @@ class SwitchboardEngine:
         # Load the initial values
         self._update_devices_values()
 
+        # Let iodata now we may have a new table structure
+        self._iodata.reset_table()
+
 
     def upsert_switchboard_module(self, module_name):
         module_func_name = module_name.split('.')[-1]
@@ -174,12 +189,13 @@ class SwitchboardEngine:
                     with self.lock:
                         self._update_devices_values()
                         self._check_modules()
+                self._iodata.take_snapshot(self.hosts, self.devices)
             except KeyboardInterrupt:
                 break
 
 
     def set_remote_device_value(self, device, value):
-        # Stip the host alias from the device name so that the remote
+        # Strip the host alias from the device name so that the remote
         # host recognises its local device
         local_device_name = device.name[device.name.find('.') + 1:]
         payload = json.dumps({'name': local_device_name, 'value': str(value)})

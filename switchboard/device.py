@@ -64,22 +64,18 @@ class SwitchboardDevice(object):
 
         self.error = None
 
-        self._input_signal = None
-        self._output_signal = None
+        self.input_signal = None
+        self.output_signal = None
 
 
-    def get_input_signal(self):
-        if not self._input_signal:
-            self._input_signal = SwitchboardDevice.InputSignal(self)
-
-        return self._input_signal
+    def create_input_signal(self):
+        if not self.input_signal:
+            self.input_signal = SwitchboardDevice.InputSignal(self)
 
 
-    def get_output_signal(self):
-        if not self._output_signal:
-            self._output_signal = SwitchboardDevice.OutputSignal(self)
-
-        return self._output_signal
+    def create_output_signal(self):
+        if not self.output_signal:
+            self.output_signal = SwitchboardDevice.OutputSignal(self)
 
 
     def update_value(self, value):
@@ -112,8 +108,8 @@ class SignalDevice(SwitchboardDevice):
 
         self.is_input = True
         self.is_output = True
-        self.input_signal = self.get_input_signal()
-        self.output_signal = self.get_output_signal()
+        self.create_input_signal()
+        self.create_output_signal()
 
 
     def set_value(self, value):
@@ -136,13 +132,13 @@ class RESTDevice(SwitchboardDevice):
             if not device['readable']:
                 raise Exception('Invalid device name: {} is an input (\'i\' at the end of the device name) but is not listed as readable'.format(device['name']))
             self.is_input = True
-            self.input_signal = self.get_input_signal()
+            self.create_input_signal()
 
         if 'o' in device_name_suffix:
             if not device['writeable']:
                 raise Exception('Invalid device name: {} is an output (\'o\' at the end of the device name) but is not listed as writeable'.format(device['name']))
             self.is_output = True
-            self.output_signal = self.get_output_signal()
+            self.create_output_signal()
 
 
     def set_value(self, value):

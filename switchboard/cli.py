@@ -1,7 +1,6 @@
 ''' Command Line Input module for Switchboard '''
 import cmd
 
-from threading import Thread
 from termcolor import colored
 
 def AutoComplete(text, line, options):
@@ -59,11 +58,6 @@ class SwitchboardCli(cmd.Cmd, object):
             self.prompt = colored('(stopped) ', 'red')
         return stop
 
-    def _stop_switchboard(self):
-        if self._swb_thread:
-            self._swb.terminate = True
-            self._swb_thread.join()
-
 
     def help_addhost(self):
         print('Usage:')
@@ -83,12 +77,12 @@ class SwitchboardCli(cmd.Cmd, object):
             host_url = 'http://' + host_url
 
         if not self._catch_except:
-            self._swb.add_host(host_alias, host_url)
-            self._config.add_host(host_alias, host_url)
+            self._swb.add_host(host_url, host_alias)
+            self._config.add_host(host_url, host_alias)
         else:
             try:
-                self._swb.add_host(host_alias, host_url)
-                self._config.add_host(host_alias, host_url)
+                self._swb.add_host(host_url, host_alias)
+                self._config.add_host(host_url, host_alias)
             except Exception as e:
                 print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
 
@@ -119,7 +113,11 @@ class SwitchboardCli(cmd.Cmd, object):
 
     @lock_switchboard
     def do_addmodule(self, line):
-        self._swb.upsert_switchboard_module(line)
+        try:
+            self._swb.upsert_switchboard_module(line)
+            self._config.add_module(line)
+        except Exception as e:
+            print('Couldn not add module "{}": {}'.format(line, e))
 
     def complete_addmodule(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.modules)
@@ -255,7 +253,7 @@ class SwitchboardCli(cmd.Cmd, object):
         (target, value) = parts
 
         if target in self._swb.devices:
-            self._swb.devices[target].set_value(value)
+            self._swb.devices[target].output_signal.set_value(value)
 
         elif target.lower() in list(self._config_vars.keys()):
             err = self._config.set(target, value)
@@ -284,11 +282,7 @@ class SwitchboardCli(cmd.Cmd, object):
             print('Unable to start switchboard as poll_period is not set')
             return
 
-        if self._swb_thread is None:
-            self._swb.running = True
-            self._swb_thread = Thread(target=self._swb.run)
-            self._swb_thread.start()
-        elif not self._swb.running:
+        if not self._swb.running:
             self._swb.running = True
         else:
             print('Switchboard server already running')
@@ -325,11 +319,9 @@ class SwitchboardCli(cmd.Cmd, object):
 
 
     def do_exit(self, line):
-        self._stop_switchboard()
         return True
 
 
     def do_EOF(self, line):
-        self._stop_switchboard()
         return True
 
