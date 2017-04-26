@@ -28,7 +28,6 @@ tests_require = [
 
 install_requires = [
     'requests',
-    'bottle',
     'termcolor',
     'bottle_websocket'
 ]

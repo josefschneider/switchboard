@@ -48,7 +48,14 @@
                         case 'update_fields':
                             for (var i = 0; i < data.fields.length; i++) {
                                 var update = data.fields[i]
-                                document.getElementById(update.device).innerHTML=update.value
+                                var device_value = emptyIfNull(update.value)
+                                var last_set_value = emptyIfNull(update.last_set_value)
+
+                                var value_element = document.getElementById(update.device)
+                                value_element.innerHTML=device_value
+
+                                var last_set_element = document.getElementById('last_set_' + update.device)
+                                last_set_element.innerHTML=last_set_value
                             }
                             break
 						case 'update_table':
@@ -66,19 +73,33 @@
     		        var row = '<tr><td class="col-xs-2">' + host_info.host_alias + '</td>'
                     row += '<td class="col-xs-3">' + host_info.host_url + '</td>'
                     row += '<td class="col-xs-7"><table class=\'table table-bordered\'>'
+                    row += '<thead><tr>'
+                    row += '<th>Name</th><th>Value</th><th>Last Set To</th>'
+                    row += '</tr></thead><tbody>'
 
     		        $.each(host_info.devices, function(index, device) {
                         row += '<tr>'
-    		            row += '<td class="col-xs-4">' + device.name + '</td>';
-    		            row += '<td class="col-xs-3" id=' + device.name + '>' + device.value + '</td>';
+    		            row += '<td class="col-xs-3">' + device.name + '</td>';
+
+                        var device_value = emptyIfNull(device.value)
+                        var last_set_value = emptyIfNull(device.last_set_value)
+
+    		            row += '<td class="col-xs-2" id=' + device.name + '>' + device_value + '</td>';
+    		            row += '<td class="col-xs-2" id=last_set_' + device.name + '>' + last_set_value + '</td>';
                         row += '</tr>'
     		        });
 
-    		        rows += row + '</table></td></tr>';
+                    rows += row + '</tbody></table></td></tr>';
     		    });
                 console.log(rows)
     		    $('#' + tableId + ' tbody').html(rows);
     		}
+
+            function emptyIfNull(value) {
+                if (value == null)
+                    return ''
+                return value
+            }
 
         </script>
 

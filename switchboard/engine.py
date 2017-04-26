@@ -185,9 +185,9 @@ class SwitchboardEngine:
         while not self.terminate:
             try:
                 time.sleep(float(self.config.get('poll_period')))
-                if self.running:
-                    with self.lock:
-                        self._update_devices_values()
+                with self.lock:
+                    self._update_devices_values()
+                    if self.running:
                         self._check_modules()
                 self._iodata.take_snapshot(self.hosts, self.devices)
             except KeyboardInterrupt:
