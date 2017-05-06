@@ -1,3 +1,5 @@
+''' Dashboard is an IOData Agent that displays the devices values
+    and keeps them updated using websockets '''
 
 from switchboard.utils import get_input
 from switchboard.agent_base import AgentBase
@@ -32,7 +34,6 @@ class Dashboard(AgentBase):
         self._io_state_table = []
 
         self._publish_thread = Thread(target=self._run)
-        self._publish_thread.daemon = True
         self._publish_thread.start()
 
     def init_configs(self):

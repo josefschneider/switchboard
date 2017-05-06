@@ -153,6 +153,7 @@ class SwitchboardEngine:
 
     def upsert_switchboard_module(self, module_name):
         # Instantiate the module and update data structures
+        print('Adding module {}'.format(module_name))
         swbmodule = load_attribute(module_name)
         swbmodule.module_class.enabled = True
         self.modules[module_name] = swbmodule
@@ -302,7 +303,7 @@ class Host:
             print('Encountered error for host {}: {}'.format(self.url, msg))
             self.error = msg
 
-            for device in self.devices:
+            for device in self.devices.values():
                 device.error = "Host error"
 
 

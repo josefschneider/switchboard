@@ -37,7 +37,6 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def __init__(self, swb, config, iodata):
         super(SwitchboardCli, self).__init__()
-        self._catch_except = True
         self._swb = swb
         self._config = config
         self._iodata = iodata
@@ -80,15 +79,11 @@ class SwitchboardCli(cmd.Cmd, object):
         if not host_url.startswith('http://'):
             host_url = 'http://' + host_url
 
-        if not self._catch_except:
+        try:
             self._swb.add_host(host_url, host_alias)
             self._config.add_host(host_url, host_alias)
-        else:
-            try:
-                self._swb.add_host(host_url, host_alias)
-                self._config.add_host(host_url, host_alias)
-            except EngineError as e:
-                print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
+        except EngineError as e:
+            print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
 
 
     def help_updatehost(self):
@@ -97,15 +92,11 @@ class SwitchboardCli(cmd.Cmd, object):
 
     @lock_switchboard
     def do_updatehost(self, line):
-        if not self._catch_except:
+        try:
             self._swb.update_host(line)
             self._config.add_host(line)
-        else:
-            try:
-                self._swb.update_host(line)
-                self._config.add_host(line)
-            except EngineError as e:
-                print('Could not update host "{}": {}'.format(line, e))
+        except EngineError as e:
+            print('Could not update host "{}": {}'.format(line, e))
 
     def complete_updatehost(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.hosts)
@@ -319,24 +310,6 @@ class SwitchboardCli(cmd.Cmd, object):
             print('Switchboard server is not running')
         else:
             self._swb.running = False
-
-
-    def help_catch(self):
-        print('Usage:')
-        print('catch on             catch exceptions throw - normal usage')
-        print('catch off            do not catch exceptions, for debugging')
-
-    def do_catch(self, line):
-        if line.lower() in 'on':
-            self._catch_except = True
-        elif line.lower() in 'off':
-            self._catch_except = False
-        else:
-            print('Unkown argument {}'.format(line))
-
-    def complete_catch(self, text, line, begidx, endidx):
-        options = [ 'on', 'off' ]
-        return AutoComplete(text, line, options)
 
 
     def do_exit(self, line):

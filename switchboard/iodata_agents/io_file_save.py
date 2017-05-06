@@ -24,21 +24,21 @@ class IOFileSave(AgentBase):
                 print('Error: invalid filename')
 
         while True:
-            max_line_count = get_input('Please enter the maximum line count to be stored [None]: ')
-            if not max_line_count:
-                configs['max_line_count'] = None
+            max_update_count = get_input('Please enter the maximum update count to be stored [None]: ')
+            if not max_update_count:
+                configs['max_update_count'] = None
                 break
-            if max_line_count.isdigit():
-                configs['max_line_count'] = int(max_line_count)
+            if max_update_count.isdigit():
+                configs['max_update_count'] = int(max_update_count)
                 break
-            print('Error: maximum line count must be a number or empty for infinite maximum line count')
+            print('Error: maximum line count must be a number or empty for infinite maximum update count')
 
         return configs
 
     def _write_entry(self, line):
         self.data_entries.append(line)
-        if self.configs['max_line_count']:
-            while len(self.data_entries) > self.configs['max_line_count']:
+        if self.configs['max_update_count']:
+            while len(self.data_entries) > self.configs['max_update_count']:
                 self.data_entries.pop(0)
 
         with open(self.configs['file_name'], 'w') as fp:

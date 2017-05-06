@@ -76,9 +76,11 @@ class IOData:
         for host_entry in self._current_state_table:
             for device in host_entry['devices']:
                 d_obj = devices[device['name']]
-                if device['value'] != d_obj.value or device['last_set_value'] != d_obj.last_set_value:
-                    update = {
-                            'last_update_time': str(d_obj.last_update_time),
+                if device['value'] != d_obj.value or \
+                        device['last_set_value'] != d_obj.last_set_value or \
+                        device['last_update_time'] != d_obj.last_update_time:
+
+                    update = {'last_update_time': str(d_obj.last_update_time),
                             'device': d_obj.name,
                             'value': d_obj.value,
                             'last_set_value': d_obj.last_set_value }
