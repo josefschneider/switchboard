@@ -1,11 +1,17 @@
 
 from switchboard.utils import load_attribute
+from switchboard.agent_base import AgentBase
 
 # List of IOData agents that come Out Of The Box with the Switchboard installation
 OOTB_AGENTS = {
     'Dashboard': 'switchboard.iodata_agents.dashboard.Dashboard',
     'IOFileSave': 'switchboard.iodata_agents.io_file_save.IOFileSave'
 }
+
+
+class AgentError(Exception):
+    pass
+
 
 def make_state_table(hosts, devices):
     ''' Convert hosts and devices into a brand new state table '''
@@ -52,7 +58,14 @@ class IOData:
         if agent in self.ootb_agents:
             agent = self.ootb_agents[agent]
 
-        agent_obj = load_attribute(agent)(agent_configs)
+        try:
+            agent_obj = load_attribute(agent)(agent_configs)
+        except Exception as e:
+            raise AgentError('Unable to load agent {}: {}'.format(agent, e))
+
+        if not isinstance(agent_obj, AgentBase):
+            raise AgentError('The agent {} does not inherit from the AgentBase class'.format(agent))
+
         self._agents[agent] = agent_obj
         agent_obj.reset_io_data(self._current_state_table)
         return agent_obj.get_configs()

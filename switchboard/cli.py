@@ -4,6 +4,7 @@ import cmd
 from termcolor import colored
 
 from switchboard.engine import EngineError
+from switchboard.iodata import AgentError
 
 def AutoComplete(text, line, options):
     ''' Generic auto-complete function to make it easier to write
@@ -135,7 +136,7 @@ class SwitchboardCli(cmd.Cmd, object):
         try:
             configs = self._iodata.add_agent(line)
             self._config.add_agent(line, configs)
-        except EngineError as e:
+        except AgentError as e:
             print('Couldn not add IOData agent "{}": {}'.format(line, e))
 
     def complete_addagent(self, text, line, begidx, endidx):
