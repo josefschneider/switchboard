@@ -3,6 +3,8 @@ import cmd
 
 from termcolor import colored
 
+from switchboard.engine import EngineError
+
 def AutoComplete(text, line, options):
     ''' Generic auto-complete function to make it easier to write
         complete_ functions for cmd. text is the text of the current
@@ -32,11 +34,12 @@ class SwitchboardCli(cmd.Cmd, object):
                 f(self, line)
         return wrapper
 
-    def __init__(self, swb, config):
+    def __init__(self, swb, config, iodata):
         super(SwitchboardCli, self).__init__()
         self._catch_except = True
         self._swb = swb
         self._config = config
+        self._iodata = iodata
         self._swb_thread = None
 
         self.prompt = colored('(stopped) ', 'red')
@@ -83,7 +86,7 @@ class SwitchboardCli(cmd.Cmd, object):
             try:
                 self._swb.add_host(host_url, host_alias)
                 self._config.add_host(host_url, host_alias)
-            except Exception as e:
+            except EngineError as e:
                 print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
 
 
@@ -100,7 +103,7 @@ class SwitchboardCli(cmd.Cmd, object):
             try:
                 self._swb.update_host(line)
                 self._config.add_host(line)
-            except Exception as e:
+            except EngineError as e:
                 print('Could not update host "{}": {}'.format(line, e))
 
     def complete_updatehost(self, text, line, begidx, endidx):
@@ -116,11 +119,28 @@ class SwitchboardCli(cmd.Cmd, object):
         try:
             self._swb.upsert_switchboard_module(line)
             self._config.add_module(line)
-        except Exception as e:
+        except EngineError as e:
             print('Couldn not add module "{}": {}'.format(line, e))
 
     def complete_addmodule(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.modules)
+
+
+    def help_addagent(self):
+        print('Usage:')
+        print('addagent [agent]     add IOData aggent')
+
+    @lock_switchboard
+    def do_addagent(self, line):
+        try:
+            configs = self._iodata.add_agent(line)
+            self._config.add_agent(line, configs)
+        except EngineError as e:
+            print('Couldn not add IOData agent "{}": {}'.format(line, e))
+
+    def complete_addagent(self, text, line, begidx, endidx):
+        # Autocomplete with available Out Of The Box IOData agents
+        return AutoComplete(text, line, self._iodata.ootb_agents.keys())
 
 
     def help_enable(self):

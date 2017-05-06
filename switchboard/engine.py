@@ -9,6 +9,10 @@ from threading import Lock, Thread
 
 from switchboard.device import RESTDevice
 from switchboard.module import SwitchboardModule
+from switchboard.utils import load_attribute
+
+class EngineError(Exception):
+    pass
 
 
 class SwitchboardEngine:
@@ -66,11 +70,11 @@ class SwitchboardEngine:
         print('Adding host {}({})'.format(host_alias, host_url))
 
         if host_alias in self.hosts:
-            raise Exception('Host with alias "{}" already exists'.format(host_alias))
+            raise EngineError('Host with alias "{}" already exists'.format(host_alias))
 
         for host in self.hosts.values():
             if host.url == host_url:
-                raise Exception('Host with URL "{}" already exists with'
+                raise EngineError('Host with URL "{}" already exists with'
                         'alias {}'.format(host_url, host.alias))
 
         self._upsert_host(host_url, host_alias)
@@ -83,7 +87,7 @@ class SwitchboardEngine:
         print('Updating host {}({})'.format(host_alias, host_url))
 
         if not host_alias in self.hosts:
-            raise Exception('Unknown host alias "{}"'.format(host_alias))
+            raise EngineError('Unknown host alias "{}"'.format(host_alias))
 
         self._upsert_host(self.hosts[host_alias].url, host_alias)
 
@@ -96,10 +100,14 @@ class SwitchboardEngine:
 
         # Get the info of all the devices
         info_url = host_url + '/devices_info'
-        host_devices = requests.get(info_url).json()['devices']
+        try:
+             req = requests.get(info_url).json()
+        except Exception as e:
+            raise EngineError('Unable to connect to {}: {}'.format(info_url, e))
+
 
         # TODO check formatting for host_url + '/devices_value'
-
+        host_devices = req['devices']
         print('Adding devices:')
 
         new_devices = {}
@@ -112,14 +120,14 @@ class SwitchboardEngine:
 
             # Check we don't have duplicate devices on this host
             if name in new_devices:
-                raise Exception('Device "{}" exists twice on host {}'.format(name, host_url))
+                raise EngineError('Device "{}" exists twice on host {}'.format(name, host_url))
 
             # Make sure we don't add a device that already exists on a
             # different host
             if name in self.devices and self.devices[name].host_url != host_url:
                 clashing_host = self.devices[name].host_url
                 msg = 'Device "{}" already exists for host {}'.format(name, clashing_host)
-                raise Exception(msg)
+                raise EngineError(msg)
 
             new_devices[name] = RESTDevice(device, host_url, self.set_remote_device_value)
             print('\t{}'.format(name))
@@ -144,16 +152,8 @@ class SwitchboardEngine:
 
 
     def upsert_switchboard_module(self, module_name):
-        module_func_name = module_name.split('.')[-1]
-        pymodule = '.'.join(module_name.split('.')[:-1])
-
-        if pymodule in sys.modules:
-            pymodule_instance = importlib.reload(sys.modules[pymodule])
-        else:
-            pymodule_instance = importlib.import_module(pymodule)
-
         # Instantiate the module and update data structures
-        swbmodule = getattr(pymodule_instance, module_func_name)
+        swbmodule = load_attribute(module_name)
         swbmodule.module_class.enabled = True
         self.modules[module_name] = swbmodule
 
@@ -163,7 +163,7 @@ class SwitchboardEngine:
 
     def enable_switchboard_module(self, module_name):
         if not module_name in modules:
-            raise Exception('Unknown module {}'.format(module_name))
+            raise EngineError('Unknown module {}'.format(module_name))
 
         module_class = modules[module_name].module_class
 
@@ -176,7 +176,7 @@ class SwitchboardEngine:
 
     def disable_switchboard_module(self, module_name):
         if not module_name in modules:
-            raise Exception('Unknown module {}'.format(module_name))
+            raise EngineError('Unknown module {}'.format(module_name))
 
         modules[module_name].module_class.enabled = False
 

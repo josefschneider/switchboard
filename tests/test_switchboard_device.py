@@ -20,21 +20,21 @@ def test_get_device_suffix():
 
 def test_input_signal():
     device = SwitchboardDevice('input.i')
-    input_signal = device.get_input_signal()
+    device.create_input_signal()
     device.value = 10.0
     device.error = 'Fatal error'
 
-    assert input_signal.get_value() == 10.0
-    assert input_signal.has_changed() == True
-    assert input_signal.get_error() == 'Fatal error'
+    assert device.input_signal.get_value() == 10.0
+    assert device.input_signal.has_changed() == True
+    assert device.input_signal.get_error() == 'Fatal error'
 
 
 def test_output_signal():
     device = SwitchboardDevice('output.o')
-    output_signal = device.get_output_signal()
+    device.create_output_signal()
 
     with pytest.raises(NotImplementedError):
-        output_signal.set_value(10.0)
+        device.output_signal.set_value(10.0)
 
 
 def test_rest_device_bad_name():
@@ -57,9 +57,7 @@ def test_rest_input_device():
             None)
 
     assert(dev.is_input == True)
-    assert(hasattr(dev, 'input_signal'))
     assert(dev.is_output == False)
-    assert(not hasattr(dev, 'output_signal'))
 
     # This is an input device only that should not have the set_value
     # method implemented
@@ -79,9 +77,7 @@ def test_rest_output_device():
             callback)
 
     assert(dev.is_input == False)
-    assert(not hasattr(dev, 'input_signal'))
     assert(dev.is_output == True)
-    assert(hasattr(dev, 'output_signal'))
     dev.output_signal.set_value(456)
     assert(dev.last_set_value == 456)
     callback.assert_called_with(dev, 456)

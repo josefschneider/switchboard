@@ -27,6 +27,7 @@
             $(document).ready(function() {
 				var addr = 'ws://' + document.domain + ':' + location.port + '/websocket'
 				socket = new WebSocket(addr);
+                document.getElementById('warning').style.visibility = 'hidden'
 
 				socket.onerror = function(event) {
 					console.log('Error detected: ' + event);
@@ -35,6 +36,7 @@
 				socket.onclose = function() {
 					socket = null;
 					console.log('socket closed')
+                    document.getElementById('warning').style.visibility = 'visible'
 				}
 
 				socket.onopen = function(event) {
@@ -102,6 +104,8 @@
             }
 
         </script>
+
+        <p id='warning'><font color='red'>Warning: lost connection with server. Restart server and refresh this page</font></p>
 
         <div class='row col-md-12'>
             <table id='device_table' class='table table-striped'>

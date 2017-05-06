@@ -3,18 +3,14 @@ import os
 import json
 from email.utils import parseaddr
 
+from switchboard.utils import get_input
+
 def is_float(string):
     try:
         float(string)
         return True
     except:
         return False
-
-# Make input function python2 and 3 compatible
-try:
-    input = raw_input
-except NameError:
-    pass
 
 
 class SwitchboardConfig:
@@ -26,6 +22,8 @@ class SwitchboardConfig:
     # * limit: a human readable description of the acceptable option
     #       value limits
     # * type: the type of the option
+    # * default: the arguments assigned to the option instance when it
+    #       is constructed
     CONFIG_OPTS = {
             'poll_period': {
                 'desc': 'polling period in seconds',
@@ -43,6 +41,11 @@ class SwitchboardConfig:
                 'test': lambda x: isinstance(x, list),
                 'limit': 'a list',
                 'type': list
+            },
+            'iodata_agents': {
+                'test': lambda x: isinstance(x, dict),
+                'limit': 'a dictionary',
+                'type': dict
             }
     }
 
@@ -98,6 +101,11 @@ class SwitchboardConfig:
         self._save_config()
 
 
+    def add_agent(self, agent, configs):
+        self.configs['iodata_agents'][agent] = configs
+        self._save_config()
+
+
     def load_config(self, file_name):
         ''' Load the json config file. If it doesn't exist creat one
             through an interactive prompt '''
@@ -141,7 +149,7 @@ class SwitchboardConfig:
 
         if self._config_file != None:
             with open(self._config_file, 'w') as cfp:
-                json.dump(self.configs, cfp)
+                json.dump(self.configs, cfp, indent=4)
 
 
     def _initial_setup(self):
@@ -159,7 +167,7 @@ class SwitchboardConfig:
         ''' Reusable function to get config value, test it and store it '''
 
         while True:
-            value = input('Please enter {}: '.format(opt['desc']))
+            value = get_input('Please enter {}: '.format(opt['desc']))
 
             if opt['test'](value):
                 self.configs[key] = value

@@ -1,4 +1,10 @@
 
+from switchboard.utils import load_attribute
+
+# List of IOData agents that come Out Of The Box with the Switchboard installation
+OOTB_AGENTS = {
+    'dashboard': 'switchboard.iodata_agents.dashboard.Dashboard'
+}
 
 def make_state_table(hosts, devices):
     ''' Convert hosts and devices into a brand new state table '''
@@ -20,16 +26,33 @@ class IOData:
     ''' IOData receives the entire Switchboard IO state at every tick
         and converts the progression of the IO state into a list of diffs.
 
-        Registered data consumers are notified every time there is an
-        update. '''
+        All agents are notified every time there is an update. '''
 
-    def __init__(self):
+    def __init__(self, config):
+        self._config = config
+
+        # The last known state of the Switchboard IOs
         self._current_state_table = []
-        self._data_consumers = []
 
-    def add_consumer(self, consumer):
-        ''' Register a consumer for IOData updates '''
-        self._data_consumers.append(consumer)
+        # Out Of The Box agents
+        self.ootb_agents = OOTB_AGENTS
+
+        # Dictionary of agent name -> agent instantiation
+        self._agents = {}
+
+    def init_config(self):
+        for agent, configs in self._config.get('iodata_agents').items():
+            print('Adding {} agent'.format(agent))
+            self.add_agent(agent, configs)
+
+    def add_agent(self, agent, agent_configs={}):
+        if agent in self.ootb_agents:
+            agent = self.ootb_agents[agent]
+
+        agent_obj = load_attribute(agent)(agent_configs)
+        self._agents[agent] = agent_obj
+        agent_obj.reset_io_data(self._current_state_table)
+        return agent_obj.get_configs()
 
     def _determine_table_updates(self, devices):
         updates = []
@@ -60,10 +83,10 @@ class IOData:
         if self._current_state_table:
             updates = self._determine_table_updates(devices)
             if updates:
-                for consumer in self._data_consumers:
-                    consumer.update_io_data(self._current_state_table, updates)
+                for agent in self._agents.values():
+                    agent.update_io_data(self._current_state_table, updates)
         else:
             # The state table has been reset. Create a new one.
             self._current_state_table = make_state_table(hosts, devices)
-            for consumer in self._data_consumers:
-                consumer.reset_io_data(self._current_state_table)
+            for agent in self._agents.values():
+                agent.reset_io_data(self._current_state_table)
