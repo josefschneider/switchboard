@@ -3,7 +3,8 @@ from switchboard.utils import load_attribute
 
 # List of IOData agents that come Out Of The Box with the Switchboard installation
 OOTB_AGENTS = {
-    'dashboard': 'switchboard.iodata_agents.dashboard.Dashboard'
+    'Dashboard': 'switchboard.iodata_agents.dashboard.Dashboard',
+    'IOFileSave': 'switchboard.iodata_agents.io_file_save.IOFileSave'
 }
 
 def make_state_table(hosts, devices):
@@ -14,7 +15,9 @@ def make_state_table(hosts, devices):
         devices_entries = host_entry['devices']
         for device in host.devices:
             d_obj = devices[device]
-            device_entry = { 'name': d_obj.name,
+            device_entry = {
+                    'last_update_time': str(d_obj.last_update_time),
+                    'name': d_obj.name,
                     'value': d_obj.value,
                     'last_set_value': d_obj.last_set_value }
             devices_entries.append(device_entry)
@@ -61,12 +64,15 @@ class IOData:
             for device in host_entry['devices']:
                 d_obj = devices[device['name']]
                 if device['value'] != d_obj.value or device['last_set_value'] != d_obj.last_set_value:
-                    update = {'device': d_obj.name,
+                    update = {
+                            'last_update_time': str(d_obj.last_update_time),
+                            'device': d_obj.name,
                             'value': d_obj.value,
                             'last_set_value': d_obj.last_set_value }
                     updates.append(update)
 
                     # Update the current_state_table
+                    device['last_update_time'] = str(d_obj.last_update_time),
                     device['value'] = d_obj.value
                     device['last_set_value'] = d_obj.last_set_value
 

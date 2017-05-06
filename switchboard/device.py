@@ -1,4 +1,5 @@
 
+from datetime import datetime
 
 def get_device_suffix(name):
     ''' Gets the device suffix indicating device type ('.i' for input,
@@ -45,6 +46,7 @@ class SwitchboardDevice(object):
             self.driving_module = None
 
         def set_value(self, value):
+            self._device.last_update_time = datetime.now()
             self._device.last_set_value = value
             self._device.set_value(value)
 
@@ -66,6 +68,7 @@ class SwitchboardDevice(object):
 
         self.input_signal = None
         self.output_signal = None
+        self.last_update_time = datetime.now()
 
 
     def create_input_signal(self):
@@ -82,6 +85,7 @@ class SwitchboardDevice(object):
         ''' To be called by the Switchboard engine when an input is updated'''
         self.previous_value = self.value
         self.value = value
+        self.last_update_time = datetime.now()
 
 
     def set_value(self, value):

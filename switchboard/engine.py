@@ -182,9 +182,15 @@ class SwitchboardEngine:
 
 
     def run(self):
+        prev_cycle_time = 0.0
         while not self.terminate:
             try:
-                time.sleep(float(self.config.get('poll_period')))
+                time_diff = time.time() - prev_cycle_time
+                sleep_time = float(self.config.get('poll_period')) - time_diff
+                if sleep_time > 0.0:
+                    time.sleep(sleep_time)
+                prev_cycle_time = time.time()
+
                 with self.lock:
                     self._update_devices_values()
                     if self.running:

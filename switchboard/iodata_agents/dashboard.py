@@ -24,11 +24,7 @@ def send_state_table(ws, state_table):
 
 class Dashboard(AgentBase):
     def __init__(self, configs):
-        if not configs:
-            self._init_configs()
-        else:
-            self._configs = configs
-
+        super(Dashboard, self).__init__(configs)
         self._app = Bottle()
         self._app.route('/', method='GET', callback=self._index)
         self._app.route('/websocket', method='GET', callback=self._websocket_connection, apply=[websocket])
@@ -39,17 +35,17 @@ class Dashboard(AgentBase):
         self._publish_thread.daemon = True
         self._publish_thread.start()
 
-    def _init_configs(self):
+    def init_configs(self):
         while True:
-            port_string = get_input('Please enter Dashboard port: ')
+            port_string = get_input('Please enter dashboard port: ')
             if port_string.isdigit():
                 break
             print('Error: port must be a number between 0 and 65535')
 
-        self._configs = { 'port': int(port_string) }
+        return { 'port': int(port_string) }
 
     def _run(self):
-        self._app.run(host='127.0.0.1', port=self._configs['port'], debug=False, quiet=True, server=GeventWebSocketServer)
+        self._app.run(host='127.0.0.1', port=self.configs['port'], debug=False, quiet=True, server=GeventWebSocketServer)
 
     def _index(self):
         return static_file('index.html', root=module_path + '/views/')
@@ -62,9 +58,6 @@ class Dashboard(AgentBase):
             if msg is None:
                 break
         self._clients.remove(ws)
-
-    def get_configs(self):
-        return self._configs
 
     def update_io_data(self, state_table, updates):
         self._io_state_table = state_table
