@@ -1,7 +1,11 @@
 
+import sys
+import argparse
+import json
+
+from copy import deepcopy
 from functools import wraps
 
-import json
 from bottle import Bottle, request, response
 
 
@@ -141,3 +145,27 @@ class SwitchboardClient(SwitchboardDeviceStore):
 
         return json.dumps(retval)
 
+
+class ClientApp(SwitchboardClient):
+    def __init__(self, configs=[]):
+        configs.insert(0, { 'name': '--port', 'short': '-p', 'desc': 'Switchboard client listening port' })
+
+        arguments = deepcopy(configs)
+        arguments.append({ 'name': '--getconf', 'short': '-gc', 'desc': 'Get a JSON representation of the application config options', 'action': 'store_true' })
+
+        arg_parser = argparse.ArgumentParser()
+        for arg in arguments:
+            if not 'action' in arg:
+                arg['action'] = 'store'
+            arg_parser.add_argument(arg['short'], arg['name'], help=arg['desc'], action=arg['action'])
+        self.args = arg_parser.parse_args()
+
+        if self.args.getconf:
+            print('{}'.format(json.dumps(configs)))
+            sys.exit(0)
+
+        if not self.args.port:
+            print('Cannot run Switchboard client, no port defined')
+            sys.exit(1)
+
+        super(ClientApp, self).__init__('0.0.0.0', self.args.port)

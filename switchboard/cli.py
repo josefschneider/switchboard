@@ -212,6 +212,7 @@ class SwitchboardCli(cmd.Cmd, object):
     def help_get(self):
         print('Usage:')
         print('get [device]         show value of device')
+        print('get [config]         show value of a config option')
         for key, opt in self._config_vars.items():
             print('get {:<17}{}'.format(key, opt['desc']))
 
@@ -250,7 +251,8 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def help_set(self):
         print('Usage:')
-        print('set [device] [value]    set given device to given value')
+        print('set [device] [value]    set device to given value')
+        print('set [config] [value]    set config option to given value')
         for key, opt in self._config_vars.items():
             print('set {:<19} {}'.format(key + " [value]", opt['desc']))
 

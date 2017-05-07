@@ -34,6 +34,7 @@ class Dashboard(AgentBase):
         self._io_state_table = []
 
         self._publish_thread = Thread(target=self._run)
+        self._publish_thread.daemon = True
         self._publish_thread.start()
 
     def init_configs(self):
