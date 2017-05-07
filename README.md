@@ -21,7 +21,7 @@ These are a few of the many hard questions I had to ask myself when deciding how
 
 1. Download repository
 2. Install dependencies `pip install -r requirements.txt`
-2. Run `pip setup.py install`
+2. Run `python setup.py install`
 3. To execute, run `switchboard -c <settings file>`. `-c` can be used to specify a settings file and is optional.
 
 ## Commands
