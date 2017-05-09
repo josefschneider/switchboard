@@ -1,7 +1,6 @@
 
 import os
 import json
-from email.utils import parseaddr
 
 from switchboard.utils import get_input
 
@@ -15,22 +14,20 @@ def is_float(string):
 
 class SwitchboardConfig:
     # Different configuration options together with their attributes:
-    # * desc: only available for string options that can be entered by
-    #       the user, this field provides a description of the option
+    # * desc: description of the required settings to be shown when the
+    #       user wants to start switchboard with an empty config or
+    #       without a config file
     # * test: a callable function that returns true if the option value
     #       is acceptable, and false if not
     # * limit: a human readable description of the acceptable option
     #       value limits
     # * type: the type of the option
-    # * default: the arguments assigned to the option instance when it
-    #       is constructed
     CONFIG_OPTS = {
             'poll_period': {
                 'desc': 'polling period in seconds',
                 'test': lambda x: is_float(x) and float(x) > 0.1,
                 'limit': 'a float > 0.1',
-                'type': str,
-                'default': ('1')
+                'type': str
             },
             'hosts': {
                 'test': lambda x: isinstance(x, list),
@@ -46,6 +43,11 @@ class SwitchboardConfig:
                 'test': lambda x: isinstance(x, dict),
                 'limit': 'a dictionary',
                 'type': dict
+            },
+            'running': {
+                'test': lambda x: isinstance(x, bool),
+                'limit': 'a boolean',
+                'type': bool
             }
     }
 
@@ -57,9 +59,10 @@ class SwitchboardConfig:
         self.configs = {}
         for key, opt in self.CONFIG_OPTS.items():
             args = ()
-            if 'default' in opt:
-                args = (opt['default'])
             self.configs[key] = opt['type'](*args)
+
+        # Without poll period set Switchboard can't start
+        self.configs['poll_period'] = "1.0"
 
 
     def get(self, key):
@@ -78,7 +81,7 @@ class SwitchboardConfig:
             successful this functions returns None, otherwise it returns
             an error message '''
 
-        if key in self.configs and isinstance(self.configs[key], str):
+        if key in self.configs:
             if not self.CONFIG_OPTS[key]['test'](value):
                 err = 'Invalid value "{}" for config option "{}": must be {}'.format(
                         value, key, self.CONFIG_OPTS[key]['limit'])
@@ -116,7 +119,7 @@ class SwitchboardConfig:
         # If the config file does not exist start up the interactive
         # cmd line init function
         if not os.path.isfile(self._config_file):
-            self._initial_setup()
+            self.initial_setup()
             return
 
         # Otherwise read the config file
@@ -152,7 +155,7 @@ class SwitchboardConfig:
                 json.dump(self.configs, cfp, indent=4)
 
 
-    def _initial_setup(self):
+    def initial_setup(self):
         ''' Perform the initial interactive Switchboard setup for the
             user-visible string config options and save to config file '''
 

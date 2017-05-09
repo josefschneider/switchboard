@@ -65,6 +65,8 @@ class SwitchboardEngine:
             except Exception as e:
                 sys.exit('Error adding module {}: {}'.format(module, e))
 
+        self.running = self.config.get('running')
+
 
     def add_host(self, host_url, host_alias):
         print('Adding host {}({})'.format(host_alias, host_url))

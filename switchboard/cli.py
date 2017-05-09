@@ -1,5 +1,7 @@
 ''' Command Line Input module for Switchboard '''
+
 import cmd
+import sys
 
 from termcolor import colored
 
@@ -40,9 +42,6 @@ class SwitchboardCli(cmd.Cmd, object):
         self._swb = swb
         self._config = config
         self._iodata = iodata
-        self._swb_thread = None
-
-        self.prompt = colored('(stopped) ', 'red')
 
         # Pre-load the possible config variables for auto-completion
         self._config_vars = { }
@@ -52,15 +51,24 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def run(self):
         ''' Blocking cmd input loop '''
+        self.update_prompt()
         self.cmdloop()
 
     def postcmd(self, stop, line):
-        if self._swb.running:
-            self.prompt = colored('(running) ', 'green')
-        else:
-            self.prompt = colored('(stopped) ', 'red')
+        self.update_prompt()
         return stop
 
+    def update_prompt(self):
+        if 'win' in sys.platform:
+            if self._swb.running:
+                self.prompt = '(running) '
+            else:
+                self.prompt = '(stopped) '
+        else:
+            if self._swb.running:
+                self.prompt = colored('(running) ', 'green')
+            else:
+                self.prompt = colored('(stopped) ', 'red')
 
     def help_addhost(self):
         print('Usage:')
@@ -298,6 +306,7 @@ class SwitchboardCli(cmd.Cmd, object):
 
         if not self._swb.running:
             self._swb.running = True
+            self._config.set('running', True)
         else:
             print('Switchboard server already running')
 
@@ -309,6 +318,7 @@ class SwitchboardCli(cmd.Cmd, object):
     @lock_switchboard
     def do_stop(self, line):
         if not self._swb.running:
+            self._config.set('running', False)
             print('Switchboard server is not running')
         else:
             self._swb.running = False

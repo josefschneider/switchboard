@@ -7,9 +7,9 @@ import argparse
 import sys
 
 from switchboard.config import SwitchboardConfig
+from switchboard.iodata import IOData
 from switchboard.engine import SwitchboardEngine
 from switchboard.cli import SwitchboardCli
-from switchboard.iodata import IOData
 
 
 def main():
@@ -25,8 +25,10 @@ def main():
 
         if args.config:
             swb_config.load_config(args.config)
-            swb.init_config()
             iodata.init_config()
+            swb.init_config()
+        else:
+            swb_config.initial_setup()
 
         sys.exit(cli.run())
     except KeyboardInterrupt:

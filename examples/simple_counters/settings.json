@@ -1,1 +1,18 @@
-{"poll_period": "1", "hosts": [["http://127.0.0.1:4000", "client1"], ["http://127.0.0.1:4001", "client2"]], "modules": ["test_module.module"]}
+{
+    "poll_period": "1",
+    "hosts": [
+        [
+            "http://localhost:51000",
+            "client1"
+        ],
+        [
+            "http://localhost:51001",
+            "client2"
+        ]
+    ],
+    "modules": [
+        "test_module.module"
+    ],
+    "iodata_agents": {},
+    "running": true
+}

@@ -1,21 +1,14 @@
 #!/usr/bin/env python
 
-from switchboard_client.client import SwitchboardClient, SwitchboardInputDevice
+from switchboard_client.client import ClientApp, SwitchboardInputDevice
 
-class InputClient(SwitchboardInputDevice):
-    NAME = 'input.i'
+def get_value():
+    get_value.counter += 1
+    print('Sending value {}'.format(get_value.counter))
+    return get_value.counter
 
-    def __init__(self):
-        self.counter = 0
-        super(InputClient, self).__init__(self.NAME, self.get_value)
+get_value.counter = 0
 
-    def get_value(self):
-        # Increment every time this client is polled
-        self.counter += 1
-        print('Sending value {}'.format(self.counter))
-        return self.counter
-
-
-client = SwitchboardClient('0.0.0.0', 4000, quiet=False)
-client.add_device(InputClient())
-client.run()
+app = ClientApp()
+app.add_device(SwitchboardInputDevice('input.i', get_value))
+app.run()

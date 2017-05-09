@@ -1,17 +1,10 @@
 #!/usr/bin/env python
 
-from switchboard_client.client import SwitchboardClient, SwitchboardOutputDevice
+from switchboard_client.client import ClientApp, SwitchboardOutputDevice
 
-class OutputClient(SwitchboardOutputDevice):
-    NAME = 'output.o'
+def set_value(value):
+    print('Received value {}'.format(value))
 
-    def __init__(self):
-        super(OutputClient, self).__init__(self.NAME, self.set_value)
-
-    def set_value(self, value):
-        print('Received value {}'.format(value))
-
-
-client = SwitchboardClient('0.0.0.0', 4001, quiet=False)
-client.add_device(OutputClient())
-client.run()
+app = ClientApp()
+app.add_device(SwitchboardOutputDevice('output.o', set_value))
+app.run()
