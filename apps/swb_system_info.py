@@ -5,8 +5,10 @@
 '''
 
 import psutil
+import sys
 
-from switchboard_client.client import ClientApp, SwitchboardInputDevice
+from switchboard.app import ClientApp
+from switchboard.client import SwitchboardInputDevice
 
 from subprocess import Popen, PIPE
 

@@ -6,7 +6,9 @@ import sys
 from termcolor import colored
 
 from switchboard.engine import EngineError
-from switchboard.iodata import AgentError
+
+from apps.app_list import APP_LIST
+
 
 def AutoComplete(text, line, options):
     ''' Generic auto-complete function to make it easier to write
@@ -37,11 +39,12 @@ class SwitchboardCli(cmd.Cmd, object):
                 f(self, line)
         return wrapper
 
-    def __init__(self, swb, config, iodata):
+    def __init__(self, swb, config, iodata, app_manager):
         super(SwitchboardCli, self).__init__()
         self._swb = swb
         self._config = config
         self._iodata = iodata
+        self._app_manager = app_manager
 
         # Pre-load the possible config variables for auto-completion
         self._config_vars = { }
@@ -110,6 +113,18 @@ class SwitchboardCli(cmd.Cmd, object):
         return AutoComplete(text, line, self._swb.hosts)
 
 
+    def help_launchapp(self):
+        print('Usage:')
+        print('launchapp [client]   launches client and connects to it')
+
+    @lock_switchboard
+    def do_launchapp(self, line):
+        self._app_manager.launch(line)
+
+    def complete_launchapp(self, text, line, begidx, endidx):
+        return AutoComplete(text, line, APP_LIST)
+
+
     def help_addmodule(self):
         print('Usage:')
         print('addmodule [module]   add and enable Switchboard module')
@@ -124,23 +139,6 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def complete_addmodule(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.modules)
-
-
-    def help_addagent(self):
-        print('Usage:')
-        print('addagent [agent]     add IOData aggent')
-
-    @lock_switchboard
-    def do_addagent(self, line):
-        try:
-            configs = self._iodata.add_agent(line)
-            self._config.add_agent(line, configs)
-        except AgentError as e:
-            print('Couldn not add IOData agent "{}": {}'.format(line, e))
-
-    def complete_addagent(self, text, line, begidx, endidx):
-        # Autocomplete with available Out Of The Box IOData agents
-        return AutoComplete(text, line, self._iodata.ootb_agents.keys())
 
 
     def help_enable(self):

@@ -39,9 +39,14 @@ class SwitchboardConfig:
                 'limit': 'a list',
                 'type': list
             },
-            'iodata_agents': {
+            'iodata_port': {
+                'test': lambda x: x > 0 and x < 65536,
+                'limit': 'an int > 0 and < 65536',
+                'type': int
+            },
+            'apps': {
                 'test': lambda x: isinstance(x, dict),
-                'limit': 'a dictionary',
+                'limit': 'a dict',
                 'type': dict
             },
             'running': {
@@ -104,8 +109,8 @@ class SwitchboardConfig:
         self._save_config()
 
 
-    def add_agent(self, agent, configs):
-        self.configs['iodata_agents'][agent] = configs
+    def add_app(self, configs):
+        self.configs['apps'] = configs
         self._save_config()
 
 
@@ -129,7 +134,7 @@ class SwitchboardConfig:
         # Loop through every parameter and check that it exists and is valid
         for key, opt in self.CONFIG_OPTS.items():
             if not key in self.configs:
-                msg = 'Config parameter {} not in config file'.format(key)
+                msg = 'Config parameter "{}" not in config file'.format(key)
                 raise Exception(msg)
 
             if not isinstance(self.configs[key], opt['type']):

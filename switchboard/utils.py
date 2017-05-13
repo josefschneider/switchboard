@@ -12,6 +12,16 @@ def get_input(prompt=''):
     return input(prompt)
 
 
+def get_free_port():
+    ''' Let the OS figure out a free port that we can use '''
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
 def determine_if_class_method(frames):
     ''' Bit of a hacky way to determine if the decorated function is
         defined in a class or is standalone. See:

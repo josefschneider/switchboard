@@ -22,16 +22,15 @@ class PyTest(TestCommand):
 
 
 def get_console_scripts():
-    console_scripts = [ 'switchboard = switchboard.__main__:main' ]
+    console_scripts = [ 'switchboard=switchboard.__main__:main' ]
     setup_py_path = os.path.dirname(os.path.realpath(__file__))
-    hosts_dir = setup_py_path + '/swb_clients'
+    hosts_dir = setup_py_path + '/apps'
 
-    for root, dirs, filenames in os.walk(hosts_dir):
-        for f in filenames:
-            if f.startswith('swbc_'):
-                swb_client_name = os.path.splitext(f)[0]
-                print('Installing {}'.format(swb_client_name))
-                console_scripts.append('{0} = swb_clients.{0}:main'.format(swb_client_name))
+    for f in os.listdir(hosts_dir):
+        if f.startswith('swb_'):
+            swb_client_name = os.path.splitext(f)[0]
+            print('Installing {}'.format(swb_client_name))
+            console_scripts.append('{0}=apps.{0}:main'.format(swb_client_name))
 
     return console_scripts
 

@@ -1,9 +1,5 @@
 
-import sys
-import argparse
 import json
-
-from copy import deepcopy
 from functools import wraps
 
 from bottle import Bottle, request, response
@@ -62,7 +58,8 @@ class SwitchboardIODevice(_SwitchboardDevice):
 
 
 class SwitchboardDeviceStore(object):
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super(SwitchboardDeviceStore, self).__init__(**kwargs)
         self._devices = {}
 
     def add_device(self, device):
@@ -96,18 +93,16 @@ class SwitchboardDeviceStore(object):
 
 
 class SwitchboardClient(SwitchboardDeviceStore):
-    def __init__(self, host, port, quiet=True):
-        super(SwitchboardClient, self).__init__()
-        self._host = host
-        self._port = port
+    def __init__(self, quiet=True, **kwargs):
+        super(SwitchboardClient, self).__init__(**kwargs)
         self._quiet = quiet
         self._app = Bottle()
         self._app.route('/devices_info', method='GET', callback=self._devices_info)
         self._app.route('/devices_value', method='GET', callback=self._devices_value)
         self._app.route('/device_set', method='PUT', callback=self._device_set)
 
-    def run(self):
-        self._app.run(host=self._host, port=self._port, debug=False, quiet=self._quiet)
+    def run_client(self, port, host='0.0.0.0'):
+        self._app.run(host=host, port=port, debug=False, quiet=self._quiet)
 
     def _devices_info(self):
         response.headers['Content-Type'] = 'application/json'
@@ -144,28 +139,3 @@ class SwitchboardClient(SwitchboardDeviceStore):
             retval['error'] = str(e)
 
         return json.dumps(retval)
-
-
-class ClientApp(SwitchboardClient):
-    def __init__(self, configs=[]):
-        configs.insert(0, { 'name': '--port', 'short': '-p', 'desc': 'Switchboard client listening port' })
-
-        arguments = deepcopy(configs)
-        arguments.append({ 'name': '--getconf', 'short': '-gc', 'desc': 'Get a JSON representation of the application config options', 'action': 'store_true' })
-
-        arg_parser = argparse.ArgumentParser()
-        for arg in arguments:
-            if not 'action' in arg:
-                arg['action'] = 'store'
-            arg_parser.add_argument(arg['short'], arg['name'], help=arg['desc'], action=arg['action'])
-        self.args = arg_parser.parse_args()
-
-        if self.args.getconf:
-            print('{}'.format(json.dumps(configs)))
-            sys.exit(0)
-
-        if not self.args.port:
-            print('Cannot run Switchboard client, no port defined')
-            sys.exit(1)
-
-        super(ClientApp, self).__init__('0.0.0.0', self.args.port)

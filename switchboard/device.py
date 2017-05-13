@@ -83,9 +83,10 @@ class SwitchboardDevice(object):
 
     def update_value(self, value):
         ''' To be called by the Switchboard engine when an input is updated'''
+        if self.value != value:
+            self.last_update_time = datetime.now()
         self.previous_value = self.value
         self.value = value
-        self.last_update_time = datetime.now()
 
 
     def set_value(self, value):
