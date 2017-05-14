@@ -26,13 +26,17 @@ def check_port_arg(args, port_name):
 class App(object):
     def __init__(self, configs={}, **kwargs):
         arguments = deepcopy(configs)
-        arguments['getconf'] = { 'long': '--getconf', 'short': '-gc', 'desc': 'Get a JSON representation of the application config options', 'action': 'store_true' }
+        arguments['getconf'] = {
+            'args': ['--getconf', '-gc'],
+            'kwargs': {
+                'help': 'Get a JSON representation of the application config options',
+                'action': 'store_true'
+            }
+        }
 
         arg_parser = argparse.ArgumentParser()
-        for arg in arguments.values():
-            if not 'action' in arg:
-                arg['action'] = 'store'
-            arg_parser.add_argument(arg['short'], arg['long'], help=arg['desc'], action=arg['action'])
+        for argument in arguments.values():
+            arg_parser.add_argument(*argument['args'], **argument['kwargs'])
 
         self.args = arg_parser.parse_args()
 
@@ -43,7 +47,10 @@ class App(object):
 
 class ClientApp(SwitchboardClient, App):
     def __init__(self, configs={}, **kwargs):
-        configs['Client port'] = { 'long': '--client_port', 'short': '-cp', 'desc': 'Switchboard client listening port' }
+        configs['Client port'] = {
+            'args': ['--client_port', '-cp'],
+            'kwargs': { 'help': 'Switchboard client listening port' }
+        }
 
         super(ClientApp, self).__init__(**kwargs, configs=configs)
 
@@ -59,9 +66,21 @@ class ClientApp(SwitchboardClient, App):
 
 class IODataApp(IODataClient, App):
     def __init__(self, iodata_agent, configs={}, **kwargs):
-        configs['IOData port'] = { 'long': '--iodata_port', 'short': '-ip', 'desc': 'IOData server port to connect to' }
-        configs['IOData host'] = { 'long': '--iodata_host', 'short': '-ih', 'desc': 'IOData server host to connect to' }
-        configs['autokill'] = { 'long': '--autokill', 'short': '-a', 'desc': 'Automatically kill this application if Switchboard disconnects', 'action': 'store_true' }
+        configs['IOData port'] = {
+            'args': ['--iodata_port', '-ip'],
+            'kwargs': { 'help': 'IOData server port to connect to' }
+        }
+        configs['IOData host'] = {
+            'args': ['--iodata_host', '-ih'],
+            'kwargs': { 'help': 'IOData server host to connect to' }
+        }
+        configs['autokill'] = {
+            'args': ['--autokill', '-a'],
+            'kwargs': {
+                'help': 'Automatically kill this application if Switchboard disconnects',
+                'action': 'store_true'
+            }
+        }
 
         super(IODataApp, self).__init__(**kwargs, configs=configs, iodata_agent=iodata_agent)
 

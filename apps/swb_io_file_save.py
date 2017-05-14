@@ -12,7 +12,10 @@ class IOFileSave(AgentBase):
         self.data_entries = []
 
     def set_configs(self, max_entries, file_name):
-        self.max_entries = int(max_entries)
+        if max_entries == 'infinite':
+            self.max_entries = None
+        else:
+            self.max_entries = int(max_entries)
         self.file_name = file_name
 
     def _write_entry(self, line):
@@ -42,14 +45,15 @@ def main():
     file_save = IOFileSave()
     app = IODataApp(iodata_agent=file_save, configs={
             'file name': {
-                'long': '--file_name',
-                'short': '-f',
-                'desc': 'Name of the file we want to save the IOData to'
+                'args': ['--file_name', '-f'],
+                'kwargs': { 'help': 'Name of the file we want to save the IOData to' }
             },
             'max entry count': {
-                'long': '--max_entries',
-                'short': '-m',
-                'desc': 'Maximum number of entries to be stored in the file (leave empty for infinte)'
+                'args': ['--max_entries', '-m'],
+                'kwargs': {
+                    'help': 'Maximum number of entries to be stored in the file',
+                    'default': 'infinite'
+                }
             }
         })
 

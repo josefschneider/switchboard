@@ -71,9 +71,8 @@ def main():
 
     app = IODataApp(iodata_agent=dashboard, configs={
             'Dashboard port': {
-                'long': '--dashboard_port',
-                'short': '-dp',
-                'desc': 'listening port of the Dashboard HTML server'
+                'args': [ '--dashboard_port' ,'-dp' ],
+                'kwargs': { 'help': 'listening port of the Dashboard HTML server' }
             }
         })
 

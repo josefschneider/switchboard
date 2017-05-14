@@ -10,7 +10,7 @@ from switchboard.engine import EngineError
 from apps.app_list import APP_LIST
 
 def format_arg(arg_info, value):
-    return ' {} {}'.format(arg_info['long'], value)
+    return ' {} {}'.format(arg_info['args'][0], value)
 
 class AppManager:
     def __init__(self, configs, swb):
@@ -76,19 +76,28 @@ class AppManager:
                 command += ' --autokill'
             else:
                 # ...for every other argument prompt the user
-                if 'action' in arg_info and arg_info['action'] == 'store_true':
+                kwargs = arg_info['kwargs']
+                help = kwargs['help']
+
+                if 'action' in kwargs and kwargs['action'] in 'store_true':
                     while True:
-                        value = get_input('{}? [y/n] '.format(arg_info['desc']))
+                        value = get_input('{}? [y/n] '.format(help))
                         value = value.lower()
                         if not value in [ 'y', 'n' ]:
                             print('Invalid input')
                             continue
                         if value == 'y':
-                            command += ' ' + arg_info['long']
+                            command += ' ' + arg_info['args'][0]
                         break
                 else:
-                    value = get_input('Please enter a value for the {}: '.format(arg_info['desc']))
-                    command += format_arg(arg_info, value)
+                    if 'default' in kwargs:
+                        default = ' [{}]'.format(kwargs['default'])
+                        value = get_input('Please enter a value for the {}{}: '.format(help, default))
+                        if value:
+                            command += format_arg(arg_info, value)
+                    else:
+                        value = get_input('Please enter a value for the {}: '.format(help))
+                        command += format_arg(arg_info, value)
 
         # Launch the app and make sure it hasn't crashed on us
         p = Popen(command, shell=True, preexec_fn=os.setsid)
