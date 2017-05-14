@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from switchboard_client.client import ClientApp, SwitchboardOutputDevice
+from switchboard.client import SwitchboardOutputDevice
+from switchboard.app import ClientApp
 
 def set_value(value):
     print('Received value {}'.format(value))

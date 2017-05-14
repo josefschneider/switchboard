@@ -19,7 +19,7 @@ The previous guide used a ready-made settings file. Here are the steps on how th
 
 1. Do all the steps up to step 4. and execute Switchboard with a different settings file name `switchboard -c settings2.json`
 2. You will be prompted for the polling period which determines how frequently Switchboard refreshes its input values and executes Switchboard modules. A value of 1 will do here.
-3. Add the client1 host and assign the 'client1' alias to it with `addhost localhost:51000 client1`
-4. Same for client2: `addhost localhost:51001 client2`
+3. Add the client1 client and assign the 'client1' alias to it with `addclient localhost:51000 client1`
+4. Same for client2: `addclient localhost:51001 client2`
 5. Add the Switchboard module `addmodule test_module.module`
 6. Enter `start` and make sure the output is correct

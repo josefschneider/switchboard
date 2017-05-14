@@ -110,11 +110,11 @@ class AppManager:
 
         app_configs['command'] = command
 
-        # If this is a client app we need to add the host
+        # If this is a client app we need to add it
         if client_port:
             app_configs['client_port'] = client_port
-            alias = get_input('Please enter a host alias for this client: ')
-            app_configs['host_alias'] = alias
+            alias = get_input('Please enter a client alias: ')
+            app_configs['client_alias'] = alias
 
         if self._execute_app(app, app_configs):
             self._configs.add_app(app, app_configs)
@@ -129,13 +129,13 @@ class AppManager:
 
         self.apps_running[app] = p.pid
 
-        if 'client_port' in app_configs or 'host_alias' in app_configs:
-            if 'client_port' in app_configs and 'host_alias' in app_configs:
+        if 'client_port' in app_configs or 'client_alias' in app_configs:
+            if 'client_port' in app_configs and 'client_alias' in app_configs:
                 remaining_attempts = 5
                 error = ''
                 url = 'http://localhost:' + str(app_configs['client_port'])
 
-                # First check if the server has started up and if it has add the host
+                # First check if the server has started up and if it has add the client
                 while remaining_attempts:
                     try:
                         requests.get(url + '/devices_info')
@@ -146,14 +146,14 @@ class AppManager:
                         time.sleep(1)
 
                 if remaining_attempts == 0:
-                    print('Unable to connect to app host {}: {}'.format(url, error))
+                    print('Unable to connect to app client {}: {}'.format(url, error))
                     return False
 
-                self._swb.add_host(url, app_configs['host_alias'])
+                self._swb.add_client(url, app_configs['client_alias'])
 
             else:
                 # This error should only really happen if the config file is corrupted
-                print('Cannot add host, client_port or host_alias not defined')
+                print('Cannot add client, client_port or client_alias not defined')
                 sys.exit(1)
 
         return True

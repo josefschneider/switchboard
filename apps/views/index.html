@@ -71,15 +71,15 @@
 
     		function loadTable(tableId, table_data) {
     		    var rows = '';
-    		    $.each(table_data, function(index, host_info) {
-    		        var row = '<tr><td class="col-xs-2">' + host_info.host_alias + '</td>'
-                    row += '<td class="col-xs-3">' + host_info.host_url + '</td>'
+    		    $.each(table_data, function(index, client_info) {
+    		        var row = '<tr><td class="col-xs-2">' + client_info.client_alias + '</td>'
+                    row += '<td class="col-xs-3">' + client_info.client_url + '</td>'
                     row += '<td class="col-xs-7"><table class=\'table table-bordered\'>'
                     row += '<thead><tr>'
                     row += '<th>Name</th><th>Value</th><th>Last Set To</th>'
                     row += '</tr></thead><tbody>'
 
-    		        $.each(host_info.devices, function(index, device) {
+    		        $.each(client_info.devices, function(index, device) {
                         row += '<tr>'
     		            row += '<td class="col-xs-3">' + device.name + '</td>';
 
@@ -111,8 +111,8 @@
             <table id='device_table' class='table table-striped'>
                 <thead>
                     <tr>
-                        <th>Host</th>
-                        <th>Host URL</th>
+                        <th>Client Alias</th>
+                        <th>Client URL</th>
                         <th>Devices Info</th>
                     </tr>
                 </thead>

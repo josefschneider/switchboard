@@ -24,9 +24,9 @@ class PyTest(TestCommand):
 def get_console_scripts():
     console_scripts = [ 'switchboard=switchboard.__main__:main' ]
     setup_py_path = os.path.dirname(os.path.realpath(__file__))
-    hosts_dir = setup_py_path + '/apps'
+    apps_dir = setup_py_path + '/apps'
 
-    for f in os.listdir(hosts_dir):
+    for f in os.listdir(apps_dir):
         if f.startswith('swb_'):
             swb_client_name = os.path.splitext(f)[0]
             print('Installing {}'.format(swb_client_name))

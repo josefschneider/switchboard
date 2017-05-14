@@ -1,6 +1,6 @@
 {
     "poll_period": "1",
-    "hosts": [
+    "clients": [
         [
             "http://localhost:51000",
             "client1"
@@ -13,6 +13,7 @@
     "modules": [
         "test_module.module"
     ],
-    "iodata_agents": {},
+    "iodata_port": 49001,
+    "apps": {},
     "running": true
 }

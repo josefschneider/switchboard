@@ -73,44 +73,44 @@ class SwitchboardCli(cmd.Cmd, object):
             else:
                 self.prompt = colored('(stopped) ', 'red')
 
-    def help_addhost(self):
+    def help_addclient(self):
         print('Usage:')
-        print('addhost [host] [alias]   add host and assign alias to it')
+        print('addclient [client] [alias]   add client and assign alias to it')
 
     @lock_switchboard
-    def do_addhost(self, line):
+    def do_addclient(self, line):
         parts = line.split()
         if len(parts) != 2:
-            print('"addhost" command expects two parameters')
-            self.help_addhost()
+            print('"addclient" command expects two parameters')
+            self.help_addclient()
             return
 
-        (host_url, host_alias) = parts
+        (client_url, client_alias) = parts
 
-        if not host_url.startswith('http://'):
-            host_url = 'http://' + host_url
+        if not client_url.startswith('http://'):
+            client_url = 'http://' + client_url
 
         try:
-            self._swb.add_host(host_url, host_alias)
-            self._config.add_host(host_url, host_alias)
+            self._swb.add_client(client_url, client_alias)
+            self._config.add_client(client_url, client_alias)
         except EngineError as e:
-            print('Could not add host "{}({})": {}'.format(host_alias, host_url, e))
+            print('Could not add client "{}({})": {}'.format(client_alias, client_url, e))
 
 
-    def help_updatehost(self):
+    def help_updateclient(self):
         print('Usage:')
-        print('updatehost [host alias]  update the given host')
+        print('updateclient [client alias]  update the given client')
 
     @lock_switchboard
-    def do_updatehost(self, line):
+    def do_updateclient(self, line):
         try:
-            self._swb.update_host(line)
-            self._config.add_host(line)
+            self._swb.update_client(line)
+            self._config.add_client(line)
         except EngineError as e:
-            print('Could not update host "{}": {}'.format(line, e))
+            print('Could not update client "{}": {}'.format(line, e))
 
-    def complete_updatehost(self, text, line, begidx, endidx):
-        return AutoComplete(text, line, self._swb.hosts)
+    def complete_updateclient(self, text, line, begidx, endidx):
+        return AutoComplete(text, line, self._swb.clients)
 
 
     def help_launchapp(self):
@@ -179,36 +179,36 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def help_list(self):
         print('Usage:')
-        print('list hosts           list all the hosts')
+        print('list clients         list all the clients')
         print('list devices         list all the devices')
         print('list values          list all the input device values')
 
     @lock_switchboard
     def do_list(self, line):
-        def iter_hosts():
-            if not self._swb.hosts:
-                print('No hosts registered')
+        def iter_clients():
+            if not self._swb.clients:
+                print('No clients registered')
             else:
-                print('Hosts:')
-                for host, host_obj in self._swb.hosts.items():
-                    yield host, host_obj.devices
+                print('Clients:')
+                for client, client_obj in self._swb.clients.items():
+                    yield client, client_obj.devices
 
         if not line:
             print('Empty list argument')
             self.help_list()
 
-        elif line.lower() in 'hosts':
-            for host, _ in iter_hosts():
-                print('\t{}'.format(host))
+        elif line.lower() in 'clients':
+            for client, _ in iter_clients():
+                print('\t{}'.format(client))
 
         elif line.lower() in 'devices':
-            for name, devices in iter_hosts():
+            for name, devices in iter_clients():
                 print('{}'.format(name))
                 for device in devices:
                     print('\t{}'.format(device))
 
         elif line.lower() in 'values':
-            for name, devices_names in iter_hosts():
+            for name, devices_names in iter_clients():
                 print('{}'.format(name))
                 devices = [ self._swb.devices[d] for d in devices_names ]
                 input_devices = filter(lambda d: d.is_input, devices)
@@ -223,7 +223,7 @@ class SwitchboardCli(cmd.Cmd, object):
             self.help_list()
 
     def complete_list(self, text, line, begidx, endidx):
-        options = [ 'hosts', 'devices', 'values' ]
+        options = [ 'clients', 'devices', 'values' ]
         return AutoComplete(text, line, options)
 
 

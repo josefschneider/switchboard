@@ -27,13 +27,13 @@ These are a few of the many hard questions I had to ask myself when deciding how
 ## Commands
 
 When Switchboard is running it presents a command-line interface to configure and operate the framework. Where possible these commands feature tab completion.
-* `addhost [host] [alias]` adds a new host and assigns an alias to it. Example `addhost 192.168.1.2:3000 pc`
-* `updatehost [host alias]` reloads an existing host
+* `addclient [client] [alias]` adds a new client and assigns an alias to it. Example `addclient 192.168.1.2:3000 pc`
+* `updateclient [client alias]` reloads an existing client
 * `addmodule [module]` adds or updates a Switchboard module and enables it. Example `addmodule test_module.module` (from the simple_counters example code)
 * `enable [module]` enables a Switchboard module
 * `disable [module]` disables a Switchboard module. Currently this does not disconnect any output signals driven by the module
 * `launchapp [app]` launches an app an prompts for its arguments through the Switchboard command-line interface. In order to support this functionality the app needs to provide a `--getconf` argument. If the application needs an IOData connection and/or acts as a Switchboard client these connections are automatically established.
-* `list [hosts|devices|values]` lists all the currently known hosts, devices or values
+* `list [clients|devices|values]` lists all the currently known clients, devices or values
 * `get [device|config]` prints the value of an input device or of a simple config option such as polling period
 * `set [device|config] [value]` sets the device or config option to given value
 * `start` starts the Switchboard module engine

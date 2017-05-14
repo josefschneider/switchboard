@@ -29,7 +29,7 @@ class SwitchboardConfig:
                 'limit': 'a float > 0.1',
                 'type': str
             },
-            'hosts': {
+            'clients': {
                 'test': lambda x: isinstance(x, list),
                 'limit': 'a list',
                 'type': list
@@ -99,8 +99,8 @@ class SwitchboardConfig:
         return 'Invalid config option "{}"'.format(key)
 
 
-    def add_host(self, host, alias):
-        self.configs['hosts'].append([ host, alias ])
+    def add_client(self, client, alias):
+        self.configs['clients'].append([ client, alias ])
         self._save_config()
 
 

@@ -8,13 +8,13 @@ from threading import Thread, Lock
 from switchboard.utils import get_free_port
 
 
-def _make_state_table(hosts, devices):
-    ''' Convert hosts and devices into a brand new state table '''
+def _make_state_table(clients, devices):
+    ''' Convert clients and devices into a brand new state table '''
     table = []
-    for host in hosts.values():
-        host_entry = { 'host_url': host.url, 'host_alias': host.alias , 'devices': [] }
-        devices_entries = host_entry['devices']
-        for device in host.devices:
+    for client in clients.values():
+        client_entry = { 'client_url': client.url, 'client_alias': client.alias , 'devices': [] }
+        devices_entries = client_entry['devices']
+        for device in client.devices:
             d_obj = devices[device]
             device_entry = {
                     'last_update_time': str(d_obj.last_update_time),
@@ -22,7 +22,7 @@ def _make_state_table(hosts, devices):
                     'value': d_obj.value,
                     'last_set_value': d_obj.last_set_value }
             devices_entries.append(device_entry)
-        table.append(host_entry)
+        table.append(client_entry)
     return table
 
 
@@ -84,8 +84,8 @@ class IOData:
     def _determine_table_updates(self, devices):
         updates = []
 
-        for host_entry in self._current_state_table:
-            for device in host_entry['devices']:
+        for client_entry in self._current_state_table:
+            for device in client_entry['devices']:
                 d_obj = devices[device['name']]
                 last_update_time = str(d_obj.last_update_time)
                 if device['value'] != d_obj.value or \
@@ -107,10 +107,10 @@ class IOData:
 
     def reset_table(self):
         ''' This function is called if the table structure should be updated.
-            This happens when hosts or devices are added or removed. '''
+            This happens when clients or devices are added or removed. '''
         self._current_state_table = []
 
-    def take_snapshot(self, hosts, devices):
+    def take_snapshot(self, clients, devices):
         ''' Takes a snapshot of the current IO state and notifies consumers
             of any updates '''
         with self._lock:
@@ -120,7 +120,7 @@ class IOData:
                     self._send_updates(updates, self._connections)
             else:
                 # The state table has been reset. Create a new one.
-                self._current_state_table = _make_state_table(hosts, devices)
+                self._current_state_table = _make_state_table(clients, devices)
                 self._send_table_reset(self._connections)
 
     def _send_updates(self, updates, connections):
@@ -146,11 +146,11 @@ class IODataClient:
         self.iodata_agent = iodata_agent
         super(IODataClient, self).__init__(**kwargs)
 
-    def run_iodata(self, host, port, autokill):
+    def run_iodata(self, client, port, autokill):
         while True:
             try:
                 s = socket(AF_INET, SOCK_STREAM)
-                s.connect((host, port))
+                s.connect((client, port))
             except Exception as e:
                 if autokill:
                     raise e

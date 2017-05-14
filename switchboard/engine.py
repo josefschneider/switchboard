@@ -29,8 +29,8 @@ class SwitchboardEngine:
         # Object used to encode and disseminate the consecutive IO state
         self._iodata = iodata
 
-        # Map of host alias -> Host object
-        self.hosts = {}
+        # Map of client alias -> _Client object
+        self.clients = {}
 
         # Map of module name -> _Module object
         self.modules = {}
@@ -48,16 +48,16 @@ class SwitchboardEngine:
 
 
     def init_config(self):
-        ''' Initialise the switchboard hosts and modules according to
+        ''' Initialise the switchboard clients and modules according to
             the config file '''
 
         print("Initialising switchboard config...")
 
-        for host_url, host_alias in self.config.get('hosts'):
+        for client_url, client_alias in self.config.get('clients'):
             try:
-                self._upsert_host(host_url, host_alias)
+                self._upsert_client(client_url, client_alias)
             except Exception as e:
-                sys.exit('Error adding host {}({}): {}'.format(host_alias, host_url, e))
+                sys.exit('Error adding client {}({}): {}'.format(client_alias, client_url, e))
 
         for module in self.config.get('modules'):
             try:
@@ -68,83 +68,83 @@ class SwitchboardEngine:
         self.running = self.config.get('running')
 
 
-    def add_host(self, host_url, host_alias):
-        print('Adding host {}({})'.format(host_alias, host_url))
+    def add_client(self, client_url, client_alias):
+        print('Adding client {}({})'.format(client_alias, client_url))
 
-        if host_alias in self.hosts:
-            raise EngineError('Host with alias "{}" already exists'.format(host_alias))
+        if client_alias in self.clients:
+            raise EngineError('Client with alias "{}" already exists'.format(client_alias))
 
-        for host in self.hosts.values():
-            if host.url == host_url:
-                raise EngineError('Host with URL "{}" already exists with'
-                        'alias {}'.format(host_url, host.alias))
+        for client in self.clients.values():
+            if client.url == client_url:
+                raise EngineError('Client with URL "{}" already exists with'
+                        'alias {}'.format(client_url, client.alias))
 
-        self._upsert_host(host_url, host_alias)
-
-
-    def update_host(self, host_alias):
-        if not host_url.startswith('http://'):
-            host_url = 'http://' + host_url
-
-        print('Updating host {}({})'.format(host_alias, host_url))
-
-        if not host_alias in self.hosts:
-            raise EngineError('Unknown host alias "{}"'.format(host_alias))
-
-        self._upsert_host(self.hosts[host_alias].url, host_alias)
+        self._upsert_client(client_url, client_alias)
 
 
-    def _upsert_host(self, host_url, host_alias):
-        ''' Insert or update a Switchboard host. This method throws
+    def update_client(self, client_alias):
+        if not client_url.startswith('http://'):
+            client_url = 'http://' + client_url
+
+        print('Updating client {}({})'.format(client_alias, client_url))
+
+        if not client_alias in self.clients:
+            raise EngineError('Unknown client alias "{}"'.format(client_alias))
+
+        self._upsert_client(self.clients[client_alias].url, client_alias)
+
+
+    def _upsert_client(self, client_url, client_alias):
+        ''' Insert or update a Switchboard client. This method throws
             an exception if any issues are encountered and complies to
             the strong exception guarantee (i.e., if an error is raised
             SwitchboardEngine will keep running without changing state) '''
 
         # Get the info of all the devices
-        info_url = host_url + '/devices_info'
+        info_url = client_url + '/devices_info'
         try:
              req = requests.get(info_url).json()
         except Exception as e:
             raise EngineError('Unable to connect to {}: {}'.format(info_url, e))
 
 
-        # TODO check formatting for host_url + '/devices_value'
-        host_devices = req['devices']
+        # TODO check formatting for client_url + '/devices_value'
+        client_devices = req['devices']
         print('Adding devices:')
 
         new_devices = {}
 
-        for device in host_devices:
-            # Preprend the host name to the device name so that identical
-            # devices on different hosts have different names
-            name = '{}.{}'.format(host_alias, device['name'])
+        for device in client_devices:
+            # Preprend the client name to the device name so that identical
+            # devices on different clients have different names
+            name = '{}.{}'.format(client_alias, device['name'])
             device['name'] = name
 
-            # Check we don't have duplicate devices on this host
+            # Check we don't have duplicate devices on this client
             if name in new_devices:
-                raise EngineError('Device "{}" exists twice on host {}'.format(name, host_url))
+                raise EngineError('Device "{}" exists twice on client {}'.format(name, client_url))
 
             # Make sure we don't add a device that already exists on a
-            # different host
-            if name in self.devices and self.devices[name].host_url != host_url:
-                clashing_host = self.devices[name].host_url
-                msg = 'Device "{}" already exists for host {}'.format(name, clashing_host)
+            # different client
+            if name in self.devices and self.devices[name].client_url != client_url:
+                clashing_client = self.devices[name].client_url
+                msg = 'Device "{}" already exists for client {}'.format(name, clashing_client)
                 raise EngineError(msg)
 
-            new_devices[name] = RESTDevice(device, host_url, self.set_remote_device_value)
+            new_devices[name] = RESTDevice(device, client_url, self.set_remote_device_value)
             print('\t{}'.format(name))
 
-        # In case we are updating a host we need to delete all its
-        # known 'old' devices and remove it from the input hosts set
-        if host_url in self.hosts:
-            for old_device in self.hosts[host_url].devices:
+        # In case we are updating a client we need to delete all its
+        # known 'old' devices and remove it from the input clients set
+        if client_url in self.clients:
+            for old_device in self.clients[client_url].devices:
                 del self.devices[old_device]
 
         # TODO make sure that any deleted devices aren't used by modules
 
-        # And now add all the 'new' host information
+        # And now add all the 'new' client information
         self.devices.update(new_devices)
-        self.hosts[host_alias] = Host(host_url, host_alias, new_devices.keys())
+        self.clients[client_alias] = _Client(client_url, client_alias, new_devices.keys())
 
         # Load the initial values
         self._update_devices_values()
@@ -198,17 +198,17 @@ class SwitchboardEngine:
                     self._update_devices_values()
                     if self.running:
                         self._check_modules()
-                self._iodata.take_snapshot(self.hosts, self.devices)
+                self._iodata.take_snapshot(self.clients, self.devices)
             except KeyboardInterrupt:
                 break
 
 
     def set_remote_device_value(self, device, value):
-        # Strip the host alias from the device name so that the remote
-        # host recognises its local device
+        # Strip the client alias from the device name so that the remote
+        # client recognises its local device
         local_device_name = device.name[device.name.find('.') + 1:]
         payload = json.dumps({'name': local_device_name, 'value': str(value)})
-        r = requests.put(device.host_url + '/device_set', data=payload)
+        r = requests.put(device.client_url + '/device_set', data=payload)
         try:
             response = r.json()
             if 'error' in response:
@@ -225,55 +225,55 @@ class SwitchboardEngine:
     def _update_devices_values(self):
         ''' Get updated values from all the input devices '''
 
-        for host in self.hosts.values():
-            values_url = host.url + '/devices_value'
+        for client in self.clients.values():
+            values_url = client.url + '/devices_value'
 
             try:
                 values = requests.get(values_url)
-                host.connected = True
+                client.connected = True
             except:
-                host.connected = False
-                host.on_error('Unable to access host {}'.format(host.url))
+                client.connected = False
+                client.on_error('Unable to access client {}'.format(client.url))
                 continue
 
             try:
                 values_json = values.json()
             except:
-                host.on_error('Invalid json formatting for host {}'.format(url))
+                client.on_error('Invalid json formatting for client {}'.format(url))
                 continue
 
-            error = self._check_values_json_formatting(host.url, values_json)
+            error = self._check_values_json_formatting(client.url, values_json)
             if error:
-                host.on_error(error)
+                client.on_error(error)
             else:
-                host.on_no_error()
+                client.on_no_error()
                 for device_json in values_json['devices']:
-                    self._update_device_value(host.alias, device_json)
+                    self._update_device_value(client.alias, device_json)
 
 
     def _check_values_json_formatting(self, url, values_json):
         ''' Check that the request body is correctly formatted '''
 
         if 'error' in values_json:
-            return 'Error for host {}: {}'.format(url, values_json['error'])
+            return 'Error for client {}: {}'.format(url, values_json['error'])
 
         if not 'devices' in values_json:
-            return 'Error for host {}: no "devices" field'.format(url)
+            return 'Error for client {}: no "devices" field'.format(url)
 
         for device_json in values_json['devices']:
             if not 'name' in device_json:
-                return 'Error for host {}: found device with no name'.format(url)
+                return 'Error for client {}: found device with no name'.format(url)
 
             if not 'value' in device_json and not 'error' in device_json:
-                return 'Error for host {}: device {} has no value or error field'.format(
+                return 'Error for client {}: device {} has no value or error field'.format(
                         url, device_json['name'])
 
 
-    def _update_device_value(self, host_alias, device_json):
+    def _update_device_value(self, client_alias, device_json):
         ''' Given a correctly formatted json encoded device value,
             update the local device object '''
 
-        global_dev_name = '{}.{}'.format(host_alias, device_json['name'])
+        global_dev_name = '{}.{}'.format(client_alias, device_json['name'])
         device = self.devices[global_dev_name]
 
         if 'error' in device_json:
@@ -291,7 +291,7 @@ class SwitchboardEngine:
 
 
 
-class Host:
+class _Client:
     def __init__(self, url, alias, devices):
         self.url = url
         self.alias = alias
@@ -302,16 +302,16 @@ class Host:
 
     def on_error(self, msg):
         if not self.error:
-            print('Encountered error for host {}: {}'.format(self.url, msg))
+            print('Encountered error for client {}: {}'.format(self.url, msg))
             self.error = msg
 
             for device in self.devices.values():
-                device.error = "Host error"
+                device.error = "Client error"
 
 
     def on_no_error(self):
         if self.error:
-            print('Host {} no longer in error state'.format(self.url))
+            print('Client {} no longer in error state'.format(self.url))
             self.error = None
 
             for device in self.devices:

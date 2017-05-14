@@ -123,14 +123,14 @@ class SignalDevice(SwitchboardDevice):
 
 
 class RESTDevice(SwitchboardDevice):
-    def __init__(self, device, host_url, set_value_callback):
+    def __init__(self, device, client_url, set_value_callback):
         device_name_suffix = get_device_suffix(device['name'])
         if not device_name_suffix in ['i', 'o', 'io']:
             raise Exception('Invalid suffix for device {}. Must be .i, .o or .io for swtchboard REST devices.'.format(device['name']))
 
         super(RESTDevice, self).__init__(device['name'])
 
-        self.host_url = host_url
+        self.client_url = client_url
         self._set_value_callback = set_value_callback
 
         if 'i' in device_name_suffix:

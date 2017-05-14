@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from switchboard_client.client import ClientApp, SwitchboardInputDevice
+from switchboard.client import SwitchboardInputDevice
+from switchboard.app import ClientApp
 
 def get_value():
     get_value.counter += 1
