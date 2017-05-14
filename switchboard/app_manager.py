@@ -31,24 +31,27 @@ class AppManager:
     def _terminate(self, pid):
         os.killpg(os.getpgid(pid), signal.SIGTERM)
 
-    def launch(self, application):
-        if not application in APP_LIST:
-            print('Unkown app "{}"'.format(application))
+    def kill(self, app):
+        if not app in self.apps_running:
+            print('Cannot kill {} app as it was not launched by Switchboard'.format(app))
             return
 
+        self._terminate(self.apps_running[app])
+
+    def launch(self, app):
         # Get the required config options for this app
-        p = Popen(application + ' --getconf', shell=True, stdout=PIPE, preexec_fn=os.setsid)
+        p = Popen(app + ' --getconf', shell=True, stdout=PIPE, preexec_fn=os.setsid)
         time.sleep(0.1)
 
         if not p.poll() == None:
             self._terminate(p.pid)
-            print('Error: application hangs when getting config options')
+            print('Error: app hangs when getting config options')
             return
 
         output, error = p.communicate()
 
         if error:
-            print('Error: application encountered an error')
+            print('Error: app encountered an error')
             return
 
         # If the app is a Switchboard client we connect to it automatically
@@ -59,10 +62,10 @@ class AppManager:
         try:
             args = json.loads(output)
         except:
-            print('Unable to parse application config definitions')
+            print('Unable to parse app config definitions')
             return
 
-        command = application
+        command = app
         for name, arg_info in args.items():
             # Pre-populate as many arguments as possible...
             if name == 'IOData port':
@@ -119,5 +122,5 @@ class AppManager:
             except EngineError as e:
                 print('Unable to connect to app host {}: {}'.format(url, e))
 
-        self._configs.add_app({ application: app_configs })
-        self.apps_running[application] = p.pid
+        self._configs.add_app({ app: app_configs })
+        self.apps_running[app] = p.pid

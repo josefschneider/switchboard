@@ -115,7 +115,7 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def help_launchapp(self):
         print('Usage:')
-        print('launchapp [client]   launches client and connects to it')
+        print('launchapp [app]      launches app and connects to it if neccesary')
 
     @lock_switchboard
     def do_launchapp(self, line):
@@ -123,6 +123,18 @@ class SwitchboardCli(cmd.Cmd, object):
 
     def complete_launchapp(self, text, line, begidx, endidx):
         return AutoComplete(text, line, APP_LIST)
+
+
+    def help_killapp(self):
+        print('Usage:')
+        print('killapp [app]        kill app that is already running')
+
+    @lock_switchboard
+    def do_killapp(self, line):
+        self._app_manager.kill(line)
+
+    def complete_killapp(self, text, line, begidx, endidx):
+        return AutoComplete(text, line, self._app_manager.apps_running.keys())
 
 
     def help_addmodule(self):
