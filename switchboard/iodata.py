@@ -99,7 +99,7 @@ class IOData:
                     updates.append(update)
 
                     # Update the current_state_table
-                    device['last_update_time'] = last_update_time,
+                    device['last_update_time'] = last_update_time
                     device['value'] = d_obj.value
                     device['last_set_value'] = d_obj.last_set_value
 
