@@ -1,8 +1,10 @@
 
 import os
+import sys
 import time
 import json
 import signal
+import requests
 from subprocess import Popen, PIPE
 
 from switchboard.utils import get_input, get_free_port
@@ -19,7 +21,11 @@ class AppManager:
         self.apps_running = {}
 
     def init_config(self):
-        pass
+        for app, app_configs in self._configs.get('apps').items():
+            print('Starting ' + app)
+            if not self._execute_app(app, app_configs):
+                print('Unable to start app "{}". Please fix config file and restart'.format(app))
+                sys.exit(1)
 
     def __enter__(self):
         return self
@@ -102,13 +108,6 @@ class AppManager:
                         value = get_input('Please enter a value for the {}: '.format(help))
                         command += format_arg(arg_info, value)
 
-        # Launch the app and make sure it hasn't crashed on us
-        p = Popen(command, shell=True, preexec_fn=os.setsid)
-        time.sleep(0.1)
-        if not p.poll() == None:
-            print('App has terminated unexpectedly with command: {}'.format(command))
-            return
-
         app_configs['command'] = command
 
         # If this is a client app we need to add the host
@@ -116,11 +115,45 @@ class AppManager:
             app_configs['client_port'] = client_port
             alias = get_input('Please enter a host alias for this client: ')
             app_configs['host_alias'] = alias
-            try:
-                url = 'http://localhost:' + str(client_port)
-                self._swb.add_host(url, alias)
-            except EngineError as e:
-                print('Unable to connect to app host {}: {}'.format(url, e))
 
-        self._configs.add_app({ app: app_configs })
+        if self._execute_app(app, app_configs):
+            self._configs.add_app(app, app_configs)
+
+    def _execute_app(self, app, app_configs):
+        # Launch the app and make sure it hasn't crashed on us
+        p = Popen(app_configs['command'], shell=True, preexec_fn=os.setsid)
+        time.sleep(0.1)
+        if not p.poll() == None:
+            print('App has terminated unexpectedly with command: {}'.format(command))
+            return False
+
         self.apps_running[app] = p.pid
+
+        if 'client_port' in app_configs or 'host_alias' in app_configs:
+            if 'client_port' in app_configs and 'host_alias' in app_configs:
+                remaining_attempts = 5
+                error = ''
+                url = 'http://localhost:' + str(app_configs['client_port'])
+
+                # First check if the server has started up and if it has add the host
+                while remaining_attempts:
+                    try:
+                        requests.get(url + '/devices_info')
+                        break
+                    except Exception as e:
+                        error = e
+                        remaining_attempts -= 1
+                        time.sleep(1)
+
+                if remaining_attempts == 0:
+                    print('Unable to connect to app host {}: {}'.format(url, error))
+                    return False
+
+                self._swb.add_host(url, app_configs['host_alias'])
+
+            else:
+                # This error should only really happen if the config file is corrupted
+                print('Cannot add host, client_port or host_alias not defined')
+                sys.exit(1)
+
+        return True

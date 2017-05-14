@@ -109,8 +109,10 @@ class SwitchboardConfig:
         self._save_config()
 
 
-    def add_app(self, configs):
-        self.configs['apps'] = configs
+    def add_app(self, app, configs):
+        if not isinstance(self.configs['apps'], dict):
+            self.configs['apps'] = {}
+        self.configs['apps'][app] = configs
         self._save_config()
 
 
