@@ -144,7 +144,7 @@ class SwitchboardEngine:
 
         # And now add all the 'new' client information
         self.devices.update(new_devices)
-        self.clients[client_alias] = _Client(client_url, client_alias, new_devices.keys())
+        self.clients[client_alias] = _Client(client_url, client_alias, new_devices)
 
         # Load the initial values
         self._update_devices_values()
@@ -297,7 +297,7 @@ class _Client:
         self.alias = alias
         self.connected = False
         self.error = None
-        self.devices = set(devices)
+        self.devices = devices
 
 
     def on_error(self, msg):

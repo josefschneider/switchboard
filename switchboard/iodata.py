@@ -8,19 +8,18 @@ from threading import Thread, Lock
 from switchboard.utils import get_free_port
 
 
-def _make_state_table(clients, devices):
+def _make_state_table(clients):
     ''' Convert clients and devices into a brand new state table '''
     table = []
-    for client in clients.values():
-        client_entry = { 'client_url': client.url, 'client_alias': client.alias , 'devices': [] }
+    for _, client in sorted(clients.items()):
+        client_entry = { 'client_url': client.url, 'client_alias': client.alias, 'devices': [] }
         devices_entries = client_entry['devices']
-        for device in client.devices:
-            d_obj = devices[device]
+        for _, d_obj in sorted(client.devices.items()):
             device_entry = {
-                    'last_update_time': str(d_obj.last_update_time),
-                    'name': d_obj.name,
-                    'value': d_obj.value,
-                    'last_set_value': d_obj.last_set_value }
+                'last_update_time': str(d_obj.last_update_time),
+                'name': d_obj.name,
+                'value': d_obj.value,
+                'last_set_value': d_obj.last_set_value }
             devices_entries.append(device_entry)
         table.append(client_entry)
     return table
@@ -120,7 +119,7 @@ class IOData:
                     self._send_updates(updates, self._connections)
             else:
                 # The state table has been reset. Create a new one.
-                self._current_state_table = _make_state_table(clients, devices)
+                self._current_state_table = _make_state_table(clients)
                 self._send_table_reset(self._connections)
 
     def _send_updates(self, updates, connections):
