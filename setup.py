@@ -36,7 +36,7 @@ def get_console_scripts():
             swb_client_name = os.path.splitext(f)[0]
             print('Installing {}'.format(swb_client_name))
             app_list.write('    "{}",\n'.format(swb_client_name))
-            console_scripts.append('{0}=apps.{0}:main'.format(swb_client_name))
+            console_scripts.append('{0}=apps.{0}.{0}:main'.format(swb_client_name))
 
     app_list.write(']\n')
     app_list.close()
@@ -64,7 +64,7 @@ setup(
     name='switchboard',
     version='0.1.0',
     packages=find_packages(),
-    package_data={ 'switchboard': ['*.html'] },
+    package_data={ '': ['*.html'] },
     entry_points={
         'console_scripts': console_scripts,
     },
