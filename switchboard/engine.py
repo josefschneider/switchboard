@@ -41,6 +41,8 @@ class SwitchboardEngine:
         # Lock used to synchronise switchboard with its settings
         self.lock = Lock()
 
+
+    def start(self):
         # Startup the Switchboard thread
         self._swb_thread = Thread(target=self.run)
         self._swb_thread.daemon = True
@@ -314,5 +316,5 @@ class _Client:
             print('Client {} no longer in error state'.format(self.url))
             self.error = None
 
-            for device in self.devices:
+            for device in self.devices.values():
                 device.error = None

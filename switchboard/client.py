@@ -84,7 +84,7 @@ class SwitchboardDeviceStore(object):
                 devices_value.append(value)
         return devices_value
 
-    def _set_device_value(self, name, value):
+    def set_device_value(self, name, value):
         if not name in self._devices:
             raise KeyError('Could not set value of device {} as it does not exist'.format(name))
         if not self._devices[name].writeable:
@@ -93,16 +93,17 @@ class SwitchboardDeviceStore(object):
 
 
 class SwitchboardClient(SwitchboardDeviceStore):
-    def __init__(self, quiet=True, **kwargs):
+    def __init__(self, quiet=True, debug=False, **kwargs):
         super(SwitchboardClient, self).__init__(**kwargs)
         self._quiet = quiet
+        self._debug = debug
         self._app = Bottle()
         self._app.route('/devices_info', method='GET', callback=self._devices_info)
         self._app.route('/devices_value', method='GET', callback=self._devices_value)
         self._app.route('/device_set', method='PUT', callback=self._device_set)
 
     def run_client(self, port, host='0.0.0.0'):
-        self._app.run(host=host, port=port, debug=False, quiet=self._quiet)
+        self._app.run(host=host, port=port, debug=self._debug, quiet=self._quiet)
 
     def _devices_info(self):
         response.headers['Content-Type'] = 'application/json'
@@ -118,24 +119,29 @@ class SwitchboardClient(SwitchboardDeviceStore):
         response.headers['Content-Type'] = 'application/json'
         retval = { }
 
-        try:
+        def verify_and_set(client):
             try:
                 data = json.loads(request.body.read().decode('ascii'))
             except:
                 raise ValueError('Unable to decode json data from PUT request')
 
             if data is None:
-                raise ValueError('No data sent in body of PUT request')
+                raise ValueError('No data set in body of PUT request')
 
-            if not 'value' in data:
+            if not 'name' in data:
                 raise KeyError('No "name" field in body of PUT request')
 
             if not 'value' in data:
                 raise KeyError('No "value" field in body of PUT request')
 
-            self._set_device_value(data['name'], data['value'])
+            client.set_device_value(data['name'], data['value'])
 
-        except Exception as e:
-            retval['error'] = str(e)
+        if self._debug:
+            verify_and_set(self)
+        else:
+            try:
+                verify_and_set(self)
+            except Exception as e:
+                retval['error'] = str(e)
 
         return json.dumps(retval)

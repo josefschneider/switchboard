@@ -36,7 +36,9 @@ def main():
             else:
                 swb_config.initial_setup()
 
+            swb.start()
             sys.exit(cli.run())
+
     except KeyboardInterrupt:
         pass
 
