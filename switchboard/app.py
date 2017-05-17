@@ -97,7 +97,7 @@ class IODataApp(IODataClient, App):
             sys.exit(0)
 
 
-class ClientAndIODataApp(ClientApp, IODataApp):
+class ClientIODataApp(ClientApp, IODataApp):
     def __init__(self, **kwargs):
         super(ClientAndIODataApp, self).__init__(**kwargs)
 

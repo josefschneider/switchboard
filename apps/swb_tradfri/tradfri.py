@@ -17,18 +17,20 @@ class Tradfri:
 
         # Autodetect all the groups and bulbs and add Switchboard callbacks
         groups = self.coap_get('15004')
+        bidx = 0
         for gidx, group in enumerate(groups):
             self._add_swb_device('group_{}_power.o'.format(gidx), group, self.power_group)
             self._add_swb_device('group_{}_dim.o'.format(gidx), group, self.dim_group)
 
             bulbs = self.coap_get('15004/{}'.format(group))['9018']['15002']['9003']
 
-            for bidx, bulb in enumerate(bulbs):
+            for bulb in bulbs:
                 if bulb < 65537:
                     continue
                 self._add_swb_device('bulb_{}_{}_power.o'.format(gidx, bidx), bulb, self.power_bulb)
                 self._add_swb_device('bulb_{}_{}_dim.o'.format(gidx, bidx), bulb, self.dim_bulb)
                 self._add_swb_device('bulb_{}_{}_colour.o'.format(gidx, bidx), bulb, self.colour_bulb)
+                bidx += 1
 
 
     def _add_swb_device(self, name, id, function):
