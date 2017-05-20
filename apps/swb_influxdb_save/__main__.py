@@ -127,7 +127,8 @@ def main():
     app = IODataApp(iodata_agent=influxdb, configs={
             'InfluxDB host': {
                 'args': [ '--influx_host' ,'-ifh' ],
-                'kwargs': { 'help': 'host IP of the InfluxDB server' }
+                'kwargs': { 'help': 'host IP of the InfluxDB server',
+                            'default': 'localhost' }
             },
             'InfluxDB port': {
                 'args': [ '--influx_port' ,'-ifp' ],
