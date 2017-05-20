@@ -149,7 +149,7 @@ class AppManager:
                     print('Unable to connect to app client {}: {}'.format(url, error))
                     return False
 
-                self._swb.add_client(url, app_configs['client_alias'])
+                self._swb.add_client(url, app_configs['client_alias'], log_prefix='\t')
 
             else:
                 # This error should only really happen if the config file is corrupted

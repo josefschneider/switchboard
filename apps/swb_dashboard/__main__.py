@@ -1,7 +1,6 @@
 ''' Dashboard is an IOData Agent that displays the devices values
     and keeps them updated using websockets '''
 
-from switchboard.utils import get_input
 from switchboard.app import IODataApp, check_port_arg
 from switchboard.iodata import AgentBase
 
@@ -80,6 +79,7 @@ def main():
         print('Cannot run Dashboard: missing "--dashboard_port" argument')
         sys.exit(1)
 
+    print('\tDashboard listening on port {}'.format(app.args.dashboard_port))
     if check_port_arg(app.args, 'dashboard_port'):
         port = int(app.args.dashboard_port)
         publish_thread = Thread(target=lambda port=port: dashboard.run(port))

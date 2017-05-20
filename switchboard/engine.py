@@ -57,7 +57,7 @@ class SwitchboardEngine:
 
         for client_url, client_alias in self.config.get('clients'):
             try:
-                self._upsert_client(client_url, client_alias)
+                self.add_client(client_url, client_alias)
             except Exception as e:
                 sys.exit('Error adding client {}({}): {}'.format(client_alias, client_url, e))
 
@@ -70,8 +70,8 @@ class SwitchboardEngine:
         self.running = self.config.get('running')
 
 
-    def add_client(self, client_url, client_alias):
-        print('Adding client {}({})'.format(client_alias, client_url))
+    def add_client(self, client_url, client_alias, log_prefix=''):
+        print('{}Adding client {}({})'.format(log_prefix, client_alias, client_url))
 
         if client_alias in self.clients:
             raise EngineError('Client with alias "{}" already exists'.format(client_alias))
@@ -81,22 +81,22 @@ class SwitchboardEngine:
                 raise EngineError('Client with URL "{}" already exists with'
                         'alias {}'.format(client_url, client.alias))
 
-        self._upsert_client(client_url, client_alias)
+        self._upsert_client(client_url, client_alias, log_prefix)
 
 
-    def update_client(self, client_alias):
+    def update_client(self, client_alias, log_prefix=''):
         if not client_url.startswith('http://'):
             client_url = 'http://' + client_url
 
-        print('Updating client {}({})'.format(client_alias, client_url))
+        print('{}Updating client {}({})'.format(log_prefix, client_alias, client_url))
 
         if not client_alias in self.clients:
             raise EngineError('Unknown client alias "{}"'.format(client_alias))
 
-        self._upsert_client(self.clients[client_alias].url, client_alias)
+        self._upsert_client(self.clients[client_alias].url, client_alias, log_prefix)
 
 
-    def _upsert_client(self, client_url, client_alias):
+    def _upsert_client(self, client_url, client_alias, log_prefix):
         ''' Insert or update a Switchboard client. This method throws
             an exception if any issues are encountered and complies to
             the strong exception guarantee (i.e., if an error is raised
@@ -112,7 +112,7 @@ class SwitchboardEngine:
 
         # TODO check formatting for client_url + '/devices_value'
         client_devices = req['devices']
-        print('Adding devices:')
+        print('{}Adding devices:'.format(log_prefix))
 
         new_devices = {}
 
@@ -134,7 +134,7 @@ class SwitchboardEngine:
                 raise EngineError(msg)
 
             new_devices[name] = RESTDevice(device, client_url, self.set_remote_device_value)
-            print('\t{}'.format(name))
+            print('{}\t{}'.format(log_prefix, name))
 
         # In case we are updating a client we need to delete all its
         # known 'old' devices and remove it from the input clients set
