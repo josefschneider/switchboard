@@ -22,15 +22,16 @@ class Tradfri:
             self._add_swb_o_device('group_{}_power.o'.format(gidx), group, self.power_group)
             self._add_swb_o_device('group_{}_dim.o'.format(gidx), group, self.dim_group)
 
+            # Get a list of bulb ids
             bulbs = self.coap_get('15004/{}'.format(group))['9018']['15002']['9003']
 
             for bulb in bulbs:
                 if bulb < 65537:
                     continue
-                self.add_bulb(bulb, gidx, bidx)
+                self._add_bulb(bulb, gidx, bidx)
                 bidx += 1
 
-    def add_bulb(self, bulb, gidx, bidx):
+    def _add_bulb(self, bulb, gidx, bidx):
         if self.app.args.create_inputs:
             self._add_swb_io_device('bulb_{}_{}_power.io'.format(gidx, bidx),
                     bulb, self.power_bulb, self.get_power)
@@ -49,6 +50,7 @@ class Tradfri:
             lambda id=id: rd_function(str(id)),
             lambda v, id=id: wr_function(str(id), v)))
 
+
     def power_group(self, group, value):
         payload = { "5850": 1 } if int(value) != 0 else { "5850": 0 }
         self.coap_set('15004/' + group, payload)
@@ -58,6 +60,7 @@ class Tradfri:
         value = max(0, value)
         payload = { "5851": value }
         self.coap_set('15004/' + group, payload)
+
 
     def power_bulb(self, bulb, value):
         value = 1 if int(value) != 0 else 0
@@ -81,11 +84,13 @@ class Tradfri:
         payload = { "3311": colours[value] }
         self.coap_set('15001/' + bulb, payload)
 
+
     def get_power(self, bulb):
         return self.coap_get('15001/{}'.format(bulb))['3311'][0]['5850']
 
     def get_dim(self, bulb):
         return self.coap_get('15001/{}'.format(bulb))['3311'][0]['5851']
+
 
     def coap_get(self, target):
         cmd = 'coap-client -m get -u "Client_identity"'
@@ -113,7 +118,9 @@ class Tradfri:
 
         if len(output.splitlines()) == 3:
             return None
+
         return str(output.splitlines()[3])
+
 
     @staticmethod
     def check_coap_client():
