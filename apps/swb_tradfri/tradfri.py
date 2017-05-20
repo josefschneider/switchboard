@@ -7,7 +7,7 @@ import time
 import json
 
 from subprocess import Popen, PIPE
-from switchboard.client import SwitchboardOutputDevice
+from switchboard.client import SwitchboardOutputDevice, SwitchboardIODevice
 
 class Tradfri:
     def __init__(self, app):
@@ -19,22 +19,35 @@ class Tradfri:
         groups = self.coap_get('15004')
         bidx = 0
         for gidx, group in enumerate(groups):
-            self._add_swb_device('group_{}_power.o'.format(gidx), group, self.power_group)
-            self._add_swb_device('group_{}_dim.o'.format(gidx), group, self.dim_group)
+            self._add_swb_o_device('group_{}_power.o'.format(gidx), group, self.power_group)
+            self._add_swb_o_device('group_{}_dim.o'.format(gidx), group, self.dim_group)
 
             bulbs = self.coap_get('15004/{}'.format(group))['9018']['15002']['9003']
 
             for bulb in bulbs:
                 if bulb < 65537:
                     continue
-                self._add_swb_device('bulb_{}_{}_power.o'.format(gidx, bidx), bulb, self.power_bulb)
-                self._add_swb_device('bulb_{}_{}_dim.o'.format(gidx, bidx), bulb, self.dim_bulb)
-                self._add_swb_device('bulb_{}_{}_colour.o'.format(gidx, bidx), bulb, self.colour_bulb)
+                self.add_bulb(bulb, gidx, bidx)
                 bidx += 1
 
+    def add_bulb(self, bulb, gidx, bidx):
+        if self.app.args.create_inputs:
+            self._add_swb_io_device('bulb_{}_{}_power.io'.format(gidx, bidx),
+                    bulb, self.power_bulb, self.get_power)
+            self._add_swb_io_device('bulb_{}_{}_dim.io'.format(gidx, bidx),
+                    bulb, self.dim_bulb, self.get_dim)
+        else:
+            self._add_swb_o_device('bulb_{}_{}_power.o'.format(gidx, bidx), bulb, self.power_bulb)
+            self._add_swb_o_device('bulb_{}_{}_dim.o'.format(gidx, bidx), bulb, self.dim_bulb)
+        self._add_swb_o_device('bulb_{}_{}_colour.o'.format(gidx, bidx), bulb, self.colour_bulb)
 
-    def _add_swb_device(self, name, id, function):
+    def _add_swb_o_device(self, name, id, function):
         self.app.add_device(SwitchboardOutputDevice(name, lambda v, id=id: function(str(id), v)))
+
+    def _add_swb_io_device(self, name, id, wr_function, rd_function):
+        self.app.add_device(SwitchboardIODevice(name,
+            lambda id=id: rd_function(str(id)),
+            lambda v, id=id: wr_function(str(id), v)))
 
     def power_group(self, group, value):
         payload = { "5850": 1 } if int(value) != 0 else { "5850": 0 }
@@ -67,6 +80,12 @@ class Tradfri:
 
         payload = { "3311": colours[value] }
         self.coap_set('15001/' + bulb, payload)
+
+    def get_power(self, bulb):
+        return self.coap_get('15001/{}'.format(bulb))['3311'][0]['5850']
+
+    def get_dim(self, bulb):
+        return self.coap_get('15001/{}'.format(bulb))['3311'][0]['5851']
 
     def coap_get(self, target):
         cmd = 'coap-client -m get -u "Client_identity"'
