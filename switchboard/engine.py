@@ -49,18 +49,20 @@ class SwitchboardEngine:
         self._swb_thread.start()
 
 
-    def init_config(self):
-        ''' Initialise the switchboard clients and modules according to
-            the config file '''
+    def init_clients(self):
+        ''' Initialise the switchboard clients according to the config file '''
 
-        print("Initialising switchboard config...")
-
+        print("Initialising switchboard clients...")
         for client_url, client_alias in self.config.get('clients'):
             try:
                 self.add_client(client_url, client_alias)
             except Exception as e:
                 sys.exit('Error adding client {}({}): {}'.format(client_alias, client_url, e))
 
+    def init_modules(self):
+        ''' Initialise the switchboard modules according to the config file '''
+
+        print("Initialising switchboard modules...")
         for module in self.config.get('modules'):
             try:
                 self.upsert_switchboard_module(module)

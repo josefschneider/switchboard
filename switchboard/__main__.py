@@ -29,10 +29,13 @@ def main():
             if args.config:
                 swb_config.load_config(args.config)
                 iodata.init_config()
-                swb.init_config()
+                swb.init_clients()
 
-                # Only once everything has been setup can we initialise the app manager
+                # Only once the clients have been setup can we initialise the app manager
                 app_manager.init_config()
+
+                # And the modules go right at the end once we know all the devices
+                swb.init_modules()
             else:
                 swb_config.initial_setup()
 

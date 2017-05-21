@@ -122,7 +122,7 @@ class AppManager:
     def _execute_app(self, app, app_configs):
         # Launch the app and make sure it hasn't crashed on us
         p = Popen(app_configs['command'], shell=True, preexec_fn=os.setsid)
-        time.sleep(0.1)
+        time.sleep(1)
         if not p.poll() == None:
             print('App has terminated unexpectedly with command: {}'.format(command))
             return False
