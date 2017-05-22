@@ -37,6 +37,7 @@ def main():
                 # And the modules go right at the end once we know all the devices
                 swb.init_modules()
             else:
+                iodata.init_config()
                 swb_config.initial_setup()
 
             swb.start()

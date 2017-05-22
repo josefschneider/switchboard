@@ -182,6 +182,7 @@ class SwitchboardCli(cmd.Cmd, object):
         print('list clients         list all the clients')
         print('list devices         list all the devices')
         print('list values          list all the input device values')
+        print('list apps            list all the running apps')
 
     @lock_switchboard
     def do_list(self, line):
@@ -207,6 +208,11 @@ class SwitchboardCli(cmd.Cmd, object):
                 for device in devices:
                     print('\t{}'.format(device))
 
+        elif line.lower() in 'apps':
+            print('Apps running:')
+            for app in self._app_manager.apps_running:
+                print('\t{}'.format(app))
+
         elif line.lower() in 'values':
             for name, devices_names in iter_clients():
                 print('{}'.format(name))
@@ -223,7 +229,7 @@ class SwitchboardCli(cmd.Cmd, object):
             self.help_list()
 
     def complete_list(self, text, line, begidx, endidx):
-        options = [ 'clients', 'devices', 'values' ]
+        options = [ 'clients', 'devices', 'values', 'apps' ]
         return AutoComplete(text, line, options)
 
 

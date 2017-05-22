@@ -124,7 +124,7 @@ class AppManager:
         p = Popen(app_configs['command'], shell=True, preexec_fn=os.setsid)
         time.sleep(1)
         if not p.poll() == None:
-            print('App has terminated unexpectedly with command: {}'.format(command))
+            print('App has terminated unexpectedly with command: "{}"'.format(app_configs['command']))
             return False
 
         self.apps_running[app] = p.pid
