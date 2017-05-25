@@ -3,9 +3,8 @@
 import cmd
 import sys
 
-from termcolor import colored
-
 from switchboard.engine import EngineError
+from switchboard.utils import colour_text
 
 from apps.app_list import APP_LIST
 
@@ -62,16 +61,10 @@ class SwitchboardCli(cmd.Cmd, object):
         return stop
 
     def update_prompt(self):
-        if 'win' in sys.platform:
-            if self._swb.running:
-                self.prompt = '(running) '
-            else:
-                self.prompt = '(stopped) '
+        if self._swb.running:
+            self.prompt = colour_text('(running) ', 'green')
         else:
-            if self._swb.running:
-                self.prompt = colored('(running) ', 'green')
-            else:
-                self.prompt = colored('(stopped) ', 'red')
+            self.prompt = colour_text('(stopped) ', 'red')
 
     def help_addclient(self):
         print('Usage:')
@@ -191,38 +184,67 @@ class SwitchboardCli(cmd.Cmd, object):
                 print('No clients registered')
             else:
                 print('Clients:')
-                for client, client_obj in self._swb.clients.items():
-                    yield client, client_obj.devices
+                for name, client_obj in self._swb.clients.items():
+                    yield name, client_obj
+
+        def get_max_length_str(strings):
+            max_length = 0
+            for s in strings:
+                max_length = max(max_length, len(s))
+            return max_length
+
+        def get_status(entity):
+            if entity.error:
+                return colour_text(entity.error, 'red')
+            else:
+                return colour_text('OK', 'green')
+
+        clients = self._swb.clients.items()
 
         if not line:
             print('Empty list argument')
             self.help_list()
 
         elif line.lower() in 'clients':
-            for client, _ in iter_clients():
-                print('\t{}'.format(client))
+            spacing = get_max_length_str(n for n, _ in clients)
+            spacing += 4
+            for name, client_obj in iter_clients():
+                print('\t{client:{width}}{status}'.format(
+                    client=name,
+                    width=spacing,
+                    status=get_status(client_obj)
+                ))
 
         elif line.lower() in 'devices':
-            for name, devices in iter_clients():
+            device_names = self._swb.devices.keys()
+            spacing = get_max_length_str(device_names)
+            spacing += 4
+            for name, client_obj in iter_clients():
                 print('{}'.format(name))
-                for device in devices:
-                    print('\t{}'.format(device))
+                for name, device_obj in client_obj.devices.items():
+                    print('\t{device:{width}}{status}'.format(
+                        device=name,
+                        width=spacing,
+                        status=get_status(device_obj)))
+
+        elif line.lower() in 'values':
+            spacing = get_max_length_str(self._swb.devices.keys())
+            spacing += 4
+            for name, client_obj in iter_clients():
+                print('{}'.format(name))
+                for name, device_obj in client_obj.devices.items():
+                    value = device_obj.value
+                    if device_obj.error:
+                        value = colour_text(device_obj.error, 'red')
+                    print('\t{device:{width}}: {value}'.format(
+                        device=name,
+                        width=spacing,
+                        value=value))
 
         elif line.lower() in 'apps':
             print('Apps running:')
             for app in self._app_manager.apps_running:
                 print('\t{}'.format(app))
-
-        elif line.lower() in 'values':
-            for name, devices_names in iter_clients():
-                print('{}'.format(name))
-                devices = [ self._swb.devices[d] for d in devices_names ]
-                input_devices = filter(lambda d: d.is_input, devices)
-                if input_devices:
-                    for device_obj in input_devices:
-                        print('\t{}: {}'.format(device_obj.name, device_obj.value))
-                else:
-                    print('\tNo input devices')
 
         else:
             print('Unkown list command "{}"'.format(line))

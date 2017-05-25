@@ -11,11 +11,12 @@ class ModuleError(Exception):
 
 
 class SwitchboardModule:
-    def __init__(self, inputs=[], outputs={}, static_variables={}):
+    def __init__(self, inputs=[], outputs={}, static_variables={}, evaluate_if_error=False):
         # Input and output devices/signals this module uses
         self.inputs = inputs
         self.outputs = outputs
         self.static_variables = static_variables
+        self.evaluate_if_error = evaluate_if_error
 
         # Tuple of devices that will act as arguments to the module
         self._arguments = ()
@@ -57,24 +58,35 @@ class SwitchboardModule:
             device = self._get_signal(input, device_list)
 
             if not device.is_input:
-                on_error('Can not use {} as an input to module {} as the device isn\'t readable'.format(input, self.name))
+                on_error('Can not use {} as an input to module {} as the '
+                         'device isn\'t readable'.format(input, self.name))
 
             self._arguments += (device.input_signal, )
 
-        for output, error_value in self.outputs.items():
+        for output in self.outputs:
             device = self._get_signal(output, device_list)
 
             if not device.is_output:
-                on_error('Can not use {} as an output to module {} as the device isn\'t writeable: {}'.format(output, self.name, device))
+                on_error('Can not use {} as an output to module {} as the '
+                         'device isn\'t writeable: {}'.format(output, self.name, device))
 
             output_signal = device.output_signal
             if output_signal.driving_module and output_signal.driving_module != self.name:
-                on_error('Cannot drive signal/device {} with module {}. It is already being driven by module {}.'.format(device.name, self.name, output_signal.driving_module))
+                on_error('Cannot drive signal/device {} with module {}. '
+                         'It is already being driven by module {}.'
+                         .format(device.name, self.name, output_signal.driving_module))
 
             self._arguments += (output_signal, )
 
-            if error_value:
-                self._call_if_error.append(lambda ev=error_value, os=output_signal: os.set_value(ev))
+            # Only set output error states if:
+            #   a) outputs are a dict, i.e., can specify error states
+            #   b) this specific output has an error state != None
+            #   c) we evaluate the module even if there's an error
+            if isinstance(self.outputs, dict)\
+                    and self.outputs[output]\
+                    and not self.evaluate_if_error:
+                err_value = self.outputs[output]
+                self._call_if_error.append(lambda ev=err_value, os=output_signal: os.set_value(ev))
 
         # Only assign driving modules once we're sure there are no errors
         for output in self.outputs.keys():
@@ -106,12 +118,23 @@ class SwitchboardModule:
             module to see if the module may run or not. The first error
             encountered is the one that is reported '''
 
+        previous_error = self.error
+
         for device in self._arguments:
-            if device.get_error() and device.get_error() != self.error:
-                msg = 'Disabling module {} due to device {} error: {}'.format(
-                        self.name, device.get_name(), device.get_error())
-                print('Error: ' + msg)
+            if device.get_error():
                 self.error = device.get_error()
+
+                # Update the error message in case we go from one error
+                # to another
+                if self.error != previous_error:
+                    msg = 'Disabling module {} due to device {} error: {}'.format(
+                        self.name, device.get_name(), device.get_error())
+                    print('Error: ' + msg)
+
+                # Set the output error values for the first error
+                if not previous_error:
+                    self.set_output_error_values()
+
                 return True
 
         if self.error:
@@ -135,10 +158,7 @@ class SwitchboardModule:
             assert len(args) <= 1
 
             if self.enabled:
-                error_previously = self.error != None
                 if self.check_module_io_error():
-                    if not error_previously == None:
-                        self.set_output_error_values()
                     return
 
                 f(*(args + self._arguments))
@@ -147,7 +167,7 @@ class SwitchboardModule:
 
         if self.is_class_method and len(self.static_variables) > 0:
             raise ModuleError('Static variables are not permitted for'
-                    ' switchboard modules that are class methods')
+                              ' switchboard modules that are class methods')
 
         # Initialise all the static variables
         for variable, init_value in self.static_variables.items():
@@ -156,4 +176,3 @@ class SwitchboardModule:
         wrapped_func.module_class = self
         self.name = f.__name__
         return wrapped_func
-

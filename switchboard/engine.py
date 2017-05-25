@@ -107,7 +107,7 @@ class SwitchboardEngine:
         # Get the info of all the devices
         info_url = client_url + '/devices_info'
         try:
-             req = requests.get(info_url).json()
+             req = requests.get(info_url, timeout=1).json()
         except Exception as e:
             raise EngineError('Unable to connect to {}: {}'.format(info_url, e))
 
@@ -212,13 +212,14 @@ class SwitchboardEngine:
         # client recognises its local device
         local_device_name = device.name[device.name.find('.') + 1:]
         payload = json.dumps({'name': local_device_name, 'value': str(value)})
-        r = requests.put(device.client_url + '/device_set', data=payload)
         try:
+            r = requests.put(device.client_url + '/device_set', data=payload, timeout=1)
             response = r.json()
             if 'error' in response:
                 print('Error: ' + response['error'])
         except Exception as e:
-            print('Exception "{}" when setting the output value of {}: {}'.format(e, device.name, r.content))
+            print('Exception "{}" when setting the output value of {} to {}'.format(
+                e, device.name, value))
 
 
     def _check_modules(self):
@@ -233,7 +234,7 @@ class SwitchboardEngine:
             values_url = client.url + '/devices_value'
 
             try:
-                values = requests.get(values_url)
+                values = requests.get(values_url, timeout=1)
                 client.connected = True
             except:
                 client.connected = False
@@ -310,7 +311,7 @@ class _Client:
             self.error = msg
 
             for device in self.devices.values():
-                device.error = "Client error"
+                device.error = 'Client error "{}"'.format(msg)
 
 
     def on_no_error(self):

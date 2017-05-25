@@ -1,6 +1,7 @@
 
 import sys
 import importlib
+from termcolor import colored
 
 # Make input function python2 and 3 compatible
 try:
@@ -10,6 +11,14 @@ except NameError:
 
 def get_input(prompt=''):
     return input(prompt)
+
+def colour_text(text, colour):
+    # Disables output colouring if Switchboard is running on Windows
+    # (Windows is not fully supported BTW)
+    if 'win' in sys.platform:
+        return text
+
+    return colored(text, colour)
 
 
 def get_free_port():
