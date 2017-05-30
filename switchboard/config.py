@@ -2,14 +2,7 @@
 import os
 import json
 
-from switchboard.utils import get_input
-
-def is_float(string):
-    try:
-        float(string)
-        return True
-    except:
-        return False
+from switchboard.utils import get_input, is_float
 
 
 class SwitchboardConfig:
@@ -30,9 +23,9 @@ class SwitchboardConfig:
                 'type': str
             },
             'clients': {
-                'test': lambda x: isinstance(x, list),
-                'limit': 'a list',
-                'type': list
+                'test': lambda x: isinstance(x, dict),
+                'limit': 'a dict',
+                'type': dict
             },
             'modules': {
                 'test': lambda x: isinstance(x, list),
@@ -99,13 +92,28 @@ class SwitchboardConfig:
         return 'Invalid config option "{}"'.format(key)
 
 
-    def add_client(self, client, alias):
-        self.configs['clients'].append([ client, alias ])
+    def add_client(self, url, alias, poll_period=None):
+        self.configs['clients'][alias] = { 'url': url }
+        if poll_period:
+            self.configs['clients'][alias]['poll_period'] = poll_period
+        self._save_config()
+
+
+    def remove_client(self, alias):
+        if alias in self.configs['clients']:
+            del self.configs['clients'][alias]
         self._save_config()
 
 
     def add_module(self, module):
         self.configs['modules'].append(module)
+        self._save_config()
+
+
+    def remove_module(self, module):
+        for m in list(self.configs['modules']):
+            if m == module:
+                self.configs['modules'].remove(m)
         self._save_config()
 
 

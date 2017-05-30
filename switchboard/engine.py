@@ -15,7 +15,7 @@ class EngineError(Exception):
     pass
 
 
-class SwitchboardEngine:
+class SwitchboardEngine(object):
     def __init__(self, config, iodata):
         # Determines if the SwitchboardEngine logic is running or not
         self.running = False
@@ -41,39 +41,40 @@ class SwitchboardEngine:
         # Lock used to synchronise switchboard with its settings
         self.lock = Lock()
 
-
-    def start(self):
-        # Startup the Switchboard thread
-        self._swb_thread = Thread(target=self.run)
-        self._swb_thread.daemon = True
-        self._swb_thread.start()
+        # Let the engine know how long since the last cycle
+        self.prev_cycle_time = 0.0
 
 
     def init_clients(self):
         ''' Initialise the switchboard clients according to the config file '''
 
+        if not self.config.get('clients'):
+            return
+
         print("Initialising switchboard clients...")
-        for client_url, client_alias in self.config.get('clients'):
+        for alias, client_info in self.config.get('clients').items():
             try:
-                self.add_client(client_url, client_alias)
+                poll_period = client_info['poll_period'] if 'poll_period' in client_info else None
+                self.add_client(client_info['url'], alias, poll_period)
             except Exception as e:
                 sys.exit('Error adding client {}({}): {}'.format(client_alias, client_url, e))
 
     def init_modules(self):
         ''' Initialise the switchboard modules according to the config file '''
-
-        print("Initialising switchboard modules...")
-        for module in self.config.get('modules'):
-            try:
-                self.upsert_switchboard_module(module)
-            except Exception as e:
-                sys.exit('Error adding module {}: {}'.format(module, e))
+        if self.config.get('modules'):
+            print("Initialising switchboard modules...")
+            for module in self.config.get('modules'):
+                try:
+                    self.upsert_switchboard_module(module)
+                except Exception as e:
+                    sys.exit('Error adding module {}: {}'.format(module, e))
 
         self.running = self.config.get('running')
 
 
-    def add_client(self, client_url, client_alias, log_prefix=''):
-        print('{}Adding client {}({})'.format(log_prefix, client_alias, client_url))
+    def add_client(self, client_url, client_alias, poll_period=None, log_prefix=''):
+        polling = ' poll period={}'.format(poll_period) if poll_period else ''
+        print('{}Adding client {}({}){}'.format(log_prefix, client_alias, client_url, polling))
 
         if client_alias in self.clients:
             raise EngineError('Client with alias "{}" already exists'.format(client_alias))
@@ -83,22 +84,20 @@ class SwitchboardEngine:
                 raise EngineError('Client with URL "{}" already exists with'
                         'alias {}'.format(client_url, client.alias))
 
-        self._upsert_client(client_url, client_alias, log_prefix)
+        self._upsert_client(client_url, client_alias, poll_period, log_prefix)
 
 
-    def update_client(self, client_alias, log_prefix=''):
-        if not client_url.startswith('http://'):
-            client_url = 'http://' + client_url
+    def update_client(self, client_alias, poll_period=None, log_prefix=''):
+        if not client_alias in self.clients:
+            raise EngineError('Unkown client alias "{}"'.format(client_alias))
 
+        client_url = self.clients[client_alias].url
         print('{}Updating client {}({})'.format(log_prefix, client_alias, client_url))
 
-        if not client_alias in self.clients:
-            raise EngineError('Unknown client alias "{}"'.format(client_alias))
-
-        self._upsert_client(self.clients[client_alias].url, client_alias, log_prefix)
+        self._upsert_client(client_url, client_alias, poll_period, log_prefix)
 
 
-    def _upsert_client(self, client_url, client_alias, log_prefix):
+    def _upsert_client(self, client_url, client_alias, poll_period, log_prefix):
         ''' Insert or update a Switchboard client. This method throws
             an exception if any issues are encountered and complies to
             the strong exception guarantee (i.e., if an error is raised
@@ -107,7 +106,7 @@ class SwitchboardEngine:
         # Get the info of all the devices
         info_url = client_url + '/devices_info'
         try:
-             req = requests.get(info_url, timeout=1).json()
+             req = requests.get(info_url, timeout=3).json()
         except Exception as e:
             raise EngineError('Unable to connect to {}: {}'.format(info_url, e))
 
@@ -139,19 +138,47 @@ class SwitchboardEngine:
             print('{}\t{}'.format(log_prefix, name))
 
         # In case we are updating a client we need to delete all its
-        # known 'old' devices and remove it from the input clients set
-        if client_url in self.clients:
-            for old_device in self.clients[client_url].devices:
-                del self.devices[old_device]
+        # known 'old' devices and remove it from the clients dict
+        if client_alias in self.clients:
+            # TODO cornercase: make sure that devices that no longer
+            # exist aren't used by modules
+            self.remove_client(client_alias)
 
-        # TODO make sure that any deleted devices aren't used by modules
-
-        # And now add all the 'new' client information
+        # And now add all the new/updated client information
         self.devices.update(new_devices)
-        self.clients[client_alias] = _Client(client_url, client_alias, new_devices)
+        self.clients[client_alias] = _Client(client_url, client_alias, new_devices, poll_period)
 
         # Load the initial values
         self._update_devices_values()
+
+        # Let iodata now we may have a new table structure
+        self._iodata.reset_table()
+
+
+    def get_modules_using_client(self, client_alias):
+        ''' Returns a list of the modules using the given client '''
+
+        client_obj = self.clients[client_alias]
+
+        # Figure out which modules are using the IOs from this client
+        modules_using_client = set()
+        for mod_name, mod_obj in self.modules.items():
+            ios = set(mod_obj.module_class.inputs) | set(mod_obj.module_class.outputs)
+            for device in client_obj.devices:
+                if device in ios:
+                    modules_using_client.add(mod_name)
+                    break
+
+        return modules_using_client
+
+
+    def remove_client(self, client_alias):
+        ''' Remove the given client from the list of polled clients and
+            delete the devices associated with this client '''
+
+        for old_device in self.clients[client_alias].devices:
+            del self.devices[old_device]
+        del self.clients[client_alias]
 
         # Let iodata now we may have a new table structure
         self._iodata.reset_table()
@@ -168,11 +195,16 @@ class SwitchboardEngine:
         swbmodule.module_class.create_argument_list(self.devices)
 
 
+    def remove_module(self, module_name):
+        del self.modules[module_name]
+        print('Removed module {}'.format(module_name))
+
+
     def enable_switchboard_module(self, module_name):
-        if not module_name in modules:
+        if not module_name in self.modules:
             raise EngineError('Unknown module {}'.format(module_name))
 
-        module_class = modules[module_name].module_class
+        module_class = self.modules[module_name].module_class
 
         if module_class.error:
             print('Module {} enabled but will not run due to error: {}'.format(
@@ -182,29 +214,49 @@ class SwitchboardEngine:
 
 
     def disable_switchboard_module(self, module_name):
-        if not module_name in modules:
+        if not module_name in self.modules:
             raise EngineError('Unknown module {}'.format(module_name))
 
-        modules[module_name].module_class.enabled = False
+        self.modules[module_name].module_class.enabled = False
+
+
+    def start(self):
+        ''' Startup the Switchboard thread '''
+        self._swb_thread = Thread(target=self.run)
+        self._swb_thread.daemon = True
+        self._swb_thread.start()
 
 
     def run(self):
-        prev_cycle_time = 0.0
         while not self.terminate:
             try:
-                time_diff = time.time() - prev_cycle_time
-                sleep_time = float(self.config.get('poll_period')) - time_diff
-                if sleep_time > 0.0:
-                    time.sleep(sleep_time)
-                prev_cycle_time = time.time()
-
-                with self.lock:
-                    self._update_devices_values()
-                    if self.running:
-                        self._check_modules()
-                self._iodata.take_snapshot(self.clients, self.devices)
+                self.switchboard_loop()
             except KeyboardInterrupt:
                 break
+
+
+    def switchboard_loop(self):
+        ''' Execute one loop/tick/clk of the Switchboard engine '''
+
+        # Wait to complete the poll period
+        poll_period = float(self.config.configs['poll_period'])
+        time_diff = time.time() - self.prev_cycle_time
+        sleep_time =  max(0.0, poll_period - time_diff)
+        time.sleep(sleep_time)
+        self.prev_cycle_time = time.time()
+
+        # Lock so that cli actions don't interfere
+        with self.lock:
+            # Get all the latest values
+            self._update_devices_values()
+
+            # Evaluate the modules if we're running
+            if self.running:
+                for module in self.modules.values():
+                    module()
+
+        # Update iodata agents
+        self._iodata.take_snapshot(self.clients, self.devices)
 
 
     def set_remote_device_value(self, device, value):
@@ -222,19 +274,17 @@ class SwitchboardEngine:
                 e, device.name, value))
 
 
-    def _check_modules(self):
-        for module in self.modules.values():
-            module()
-
-
     def _update_devices_values(self):
-        ''' Get updated values from all the input devices '''
+        ''' Get updated values from the devices '''
 
         for client in self.clients.values():
+            if not client.do_update():
+                continue
+
             values_url = client.url + '/devices_value'
 
             try:
-                values = requests.get(values_url, timeout=1)
+                values = requests.get(values_url, timeout=3)
                 client.connected = True
             except:
                 client.connected = False
@@ -297,22 +347,34 @@ class SwitchboardEngine:
 
 
 class _Client:
-    def __init__(self, url, alias, devices):
+    def __init__(self, url, alias, devices, poll_period):
         self.url = url
         self.alias = alias
         self.connected = False
         self.error = None
         self.devices = devices
+        self.poll_period = poll_period  # Poll every iteration if None
+        self.last_polled = 0.0
 
+    def do_update(self):
+        ''' Determines if we should update this client or not '''
+        if self.poll_period == None:
+            return True
+
+        if time.time() - self.last_polled > float(self.poll_period):
+            self.last_polled = time.time()
+            return True
+
+        return False
 
     def on_error(self, msg):
-        if not self.error:
+        ''' Sets the error state of the client and all its associated devices '''
+        if self.error != msg:
             print('Encountered error for client {}: {}'.format(self.url, msg))
             self.error = msg
 
             for device in self.devices.values():
                 device.error = 'Client error "{}"'.format(msg)
-
 
     def on_no_error(self):
         if self.error:

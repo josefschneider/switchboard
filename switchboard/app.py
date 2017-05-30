@@ -52,7 +52,7 @@ class ClientApp(SwitchboardClient, App):
             'kwargs': { 'help': 'Switchboard client listening port' }
         }
 
-        super(ClientApp, self).__init__(**kwargs, configs=configs)
+        super(ClientApp, self).__init__(configs=configs, **kwargs)
 
         if not check_port_arg(self.args, 'client_port'):
             sys.exit(1)
@@ -82,7 +82,7 @@ class IODataApp(IODataClient, App):
             }
         }
 
-        super(IODataApp, self).__init__(**kwargs, configs=configs, iodata_agent=iodata_agent)
+        super(IODataApp, self).__init__(configs=configs, iodata_agent=iodata_agent, **kwargs)
 
         if not check_port_arg(self.args, 'iodata_port'):
             sys.exit(1)

@@ -21,6 +21,14 @@ def colour_text(text, colour):
     return colored(text, colour)
 
 
+def is_float(string):
+    try:
+        float(string)
+        return True
+    except:
+        return False
+
+
 def get_free_port():
     ''' Let the OS figure out a free port that we can use '''
     import socket
