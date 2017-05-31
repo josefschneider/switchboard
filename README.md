@@ -28,12 +28,16 @@ These are a few of the many hard questions I had to ask myself when deciding how
 
 When Switchboard is running it presents a command-line interface to configure and operate the framework. Where possible these commands feature tab completion.
 * `addclient [client] [alias]` adds a new client and assigns an alias to it. Example `addclient 192.168.1.2:3000 pc`
+* `addclient [client] [alias] [poll_period]` adds a new client and polls it at roughly max(poll_period, Switchboard_poll_period). Example `addclient 192.168.1.2:3000 pc 5.0`: poll roughly every five seconds if the Switchboard poll period is < 5.0s.
 * `updateclient [client alias]` reloads an existing client
+* `updateclient [client alias] [poll_period]` reloads an existing client and updates its poll period. If poll_period == 'None' the client is polled at every Switchboard cycle.
 * `addmodule [module]` adds or updates a Switchboard module and enables it. Example `addmodule test_module.module` (from the simple_counters example code)
+* `remove [client|module]` removes client or module
 * `enable [module]` enables a Switchboard module
 * `disable [module]` disables a Switchboard module. Currently this does not disconnect any output signals driven by the module
 * `launchapp [app]` launches an app an prompts for its arguments through the Switchboard command-line interface. In order to support this functionality the app needs to provide a `--getconf` argument. If the application needs an IOData connection and/or acts as a Switchboard client these connections are automatically established.
-* `list [clients|devices|values]` lists all the currently known clients, devices or values
+* `killapp [app]` terminates an app.
+* `list [clients|devices|values|apps|modules]` lists all the currently known clients, devices, values, apps or modules
 * `get [device|config]` prints the value of an input device or of a simple config option such as polling period
 * `set [device|config] [value]` sets the device or config option to given value
 * `start` starts the Switchboard module engine

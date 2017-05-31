@@ -1,15 +1,13 @@
 {
     "poll_period": "1",
-    "clients": [
-        [
-            "http://localhost:51000",
-            "client1"
-        ],
-        [
-            "http://localhost:51001",
-            "client2"
-        ]
-    ],
+    "clients": {
+        "client1": {
+            "url": "http://localhost:51000"
+        },
+        "client2": {
+            "url": "http://localhost:51001"
+        }
+    },
     "modules": [
         "test_module.module"
     ],
