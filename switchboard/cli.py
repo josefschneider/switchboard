@@ -66,6 +66,10 @@ class SwitchboardCli(cmd.Cmd, object):
         else:
             self.prompt = colour_text('(stopped) ', 'red')
 
+    def emptyline(self):
+        ''' Hitting 'Enter' does nothing '''
+        pass
+
     def help_addclient(self):
         print('Usage:')
         print('addclient [client] [alias]   add client and assign alias to it')
@@ -207,7 +211,7 @@ class SwitchboardCli(cmd.Cmd, object):
 
                 self._swb.remove_client(client)
                 self._config.remove_client(client)
-                print('Removed client {}'.format(client))
+                print('Removed client "{}"'.format(client))
 
             except EngineError as e:
                 print('Could not remove client "{}": {}'.format(line, e))
@@ -219,7 +223,9 @@ class SwitchboardCli(cmd.Cmd, object):
             self.help_remove()
 
     def complete_remove(self, text, line, begidx, endidx):
-        return AutoComplete(text, line, list(self._swb.modules) + list(self._swb.clients.keys()))
+        return AutoComplete(text, line,
+                list(self._swb.modules) +
+                list(self._config.get('clients').keys()))
 
 
     def help_enable(self):

@@ -98,17 +98,15 @@ class SwitchboardConfig:
             self.configs['clients'][alias]['poll_period'] = poll_period
         self._save_config()
 
-
     def remove_client(self, alias):
         if alias in self.configs['clients']:
             del self.configs['clients'][alias]
-        self._save_config()
+            self._save_config()
 
 
     def add_module(self, module):
         self.configs['modules'].append(module)
         self._save_config()
-
 
     def remove_module(self, module):
         for m in list(self.configs['modules']):
@@ -122,6 +120,11 @@ class SwitchboardConfig:
             self.configs['apps'] = {}
         self.configs['apps'][app] = configs
         self._save_config()
+
+    def remove_app(self, app):
+        if app in self.configs['apps']:
+            del self.configs['apps'][app]
+            self._save_config()
 
 
     def load_config(self, file_name):

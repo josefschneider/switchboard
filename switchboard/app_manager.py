@@ -43,6 +43,8 @@ class AppManager:
             return
 
         self._terminate(self.apps_running[app])
+        self._swb.remove_client(self._configs.get('apps')[app]['client_alias'])
+        self._configs.remove_app(app)
 
     def launch(self, app):
         # Get the required config options for this app

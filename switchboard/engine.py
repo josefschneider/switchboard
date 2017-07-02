@@ -284,7 +284,7 @@ class SwitchboardEngine(object):
             values_url = client.url + '/devices_value'
 
             try:
-                values = requests.get(values_url, timeout=3)
+                values = requests.get(values_url, timeout=5)
                 client.connected = True
             except:
                 client.connected = False
