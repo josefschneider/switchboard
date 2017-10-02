@@ -1,13 +1,13 @@
-''' IOFileSave is a dumb IOData Agent that saves raw IO updates to a file.
+''' IOFileSave is a dumb WSIOData app that saves raw IO updates to a file.
     This can be useful when debugging a Switchboard module. '''
 
 from switchboard.utils import get_input
-from switchboard.iodata import AgentBase
-from switchboard.app import IODataApp
+from switchboard.ws_ctrl import WSIODataHandlerBase
+from switchboard.app import WSIODataApp
 
 import json
 
-class IOFileSave(AgentBase):
+class IOFileSave(WSIODataHandlerBase):
     def __init__(self):
         self.data_entries = []
 
@@ -28,10 +28,10 @@ class IOFileSave(AgentBase):
             for entry in self.data_entries:
                 fp.write(json.dumps(entry) + '\n')
 
-    def connected(self):
+    def connected(self, ws):
         pass
 
-    def disconnected(self):
+    def disconnected(self, ws):
         pass
 
     def update_io_data(self, state_table, updates):
@@ -43,22 +43,22 @@ class IOFileSave(AgentBase):
 
 def main():
     file_save = IOFileSave()
-    app = IODataApp(iodata_agent=file_save, configs={
+    app = WSIODataApp(ws_handler=file_save, configs={
             'file name': {
                 'args': ['--file_name', '-f'],
-                'kwargs': { 'help': 'Name of the file we want to save the IOData to' }
+                'kwargs': { 'help': 'name of the file we want to save the Switchboard data to' }
             },
             'max entry count': {
                 'args': ['--max_entries', '-m'],
                 'kwargs': {
-                    'help': 'Maximum number of entries to be stored in the file',
+                    'help': 'maximum number of entries to be stored in the file',
                     'default': 'infinite'
                 }
             }
         })
 
     if not app.args.file_name:
-        print('Cannot run IO File save: missing "--max_entries" or "--file_name" arguments')
+        print('Cannot run IO File save: missing "--file_name" argument')
         sys.exit(1)
 
     file_save.set_configs(app.args.max_entries, app.args.file_name)

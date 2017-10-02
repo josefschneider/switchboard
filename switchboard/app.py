@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 
 from switchboard.client import SwitchboardClient
-from switchboard.iodata import IODataClient
+from switchboard.ws_ctrl import WSIODataClient
 
 
 def check_port_arg(args, port_name):
@@ -29,7 +29,7 @@ class App(object):
         arguments['getconf'] = {
             'args': ['--getconf', '-gc'],
             'kwargs': {
-                'help': 'Get a JSON representation of the application config options',
+                'help': 'get a JSON representation of the application config options',
                 'action': 'store_true'
             }
         }
@@ -49,7 +49,7 @@ class ClientApp(SwitchboardClient, App):
     def __init__(self, configs={}, **kwargs):
         configs['Client port'] = {
             'args': ['--client_port', '-cp'],
-            'kwargs': { 'help': 'Switchboard client listening port' }
+            'kwargs': { 'help': 'switchboard client listening port' }
         }
 
         super(ClientApp, self).__init__(configs=configs, **kwargs)
@@ -64,15 +64,15 @@ class ClientApp(SwitchboardClient, App):
             sys.exit(0)
 
 
-class IODataApp(IODataClient, App):
-    def __init__(self, iodata_agent, configs={}, **kwargs):
-        configs['IOData port'] = {
-            'args': ['--iodata_port', '-ip'],
-            'kwargs': { 'help': 'IOData server port to connect to' }
+class WSIODataApp(WSIODataClient, App):
+    def __init__(self, ws_handler, configs={}, **kwargs):
+        configs['WSIOData port'] = {
+            'args': ['--ws_port', '-ip'],
+            'kwargs': { 'help': 'Switchboard Websocket Ctrl server port to connect to' }
         }
-        configs['IOData host'] = {
-            'args': ['--iodata_host', '-ih'],
-            'kwargs': { 'help': 'IOData server host to connect to' }
+        configs['WSIOData host'] = {
+            'args': ['--ws_host', '-ih'],
+            'kwargs': { 'help': 'Switchboard Websocket Ctrl server host to connect to' }
         }
         configs['autokill'] = {
             'args': ['--autokill', '-a'],
@@ -82,24 +82,24 @@ class IODataApp(IODataClient, App):
             }
         }
 
-        super(IODataApp, self).__init__(configs=configs, iodata_agent=iodata_agent, **kwargs)
+        super(WSIODataApp, self).__init__(configs=configs, ws_handler=ws_handler, **kwargs)
 
-        if not check_port_arg(self.args, 'iodata_port'):
+        if not check_port_arg(self.args, 'ws_port'):
             sys.exit(1)
 
     def run(self):
         try:
-            self.run_iodata(
-                self.args.iodata_host,
-                int(self.args.iodata_port),
+            self.run_ws_client(
+                self.args.ws_host,
+                int(self.args.ws_port),
                 self.args.autokill)
         except KeyboardInterrupt:
             sys.exit(0)
 
 
-class ClientIODataApp(ClientApp, IODataApp):
+class ClientAndWSIODataApp(ClientApp, WSIODataApp):
     def __init__(self, **kwargs):
-        super(ClientAndIODataApp, self).__init__(**kwargs)
+        super(ClientAndWSIODataApp, self).__init__(**kwargs)
 
     def run(self):
         try:
@@ -107,6 +107,9 @@ class ClientIODataApp(ClientApp, IODataApp):
             thread.daemon = True
             thread.start()
 
-            self.run_iodata(int(self.args.iodata_port))
+            self.run_ws_client(
+                self.args.ws_host,
+                int(self.args.ws_port),
+                self.args.autokill)
         except KeyboardInterrupt:
             sys.exit(0)

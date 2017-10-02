@@ -25,7 +25,7 @@
         <script type='text/javascript'>
 			var socket = null
             $(document).ready(function() {
-				var addr = 'ws://' + document.domain + ':' + location.port + '/websocket'
+				var addr = 'ws://' + document.domain + ':' + location.port + '/ws_ctrl'
 				socket = new WebSocket(addr);
                 document.getElementById('warning').style.visibility = 'hidden'
 

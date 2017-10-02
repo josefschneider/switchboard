@@ -16,7 +16,7 @@ class EngineError(Exception):
 
 
 class SwitchboardEngine(object):
-    def __init__(self, config, iodata):
+    def __init__(self, config, ws_ctrl):
         # Determines if the SwitchboardEngine logic is running or not
         self.running = False
 
@@ -27,7 +27,7 @@ class SwitchboardEngine(object):
         self.config = config
 
         # Object used to encode and disseminate the consecutive IO state
-        self._iodata = iodata
+        self._ws_ctrl = ws_ctrl
 
         # Map of client alias -> _Client object
         self.clients = {}
@@ -151,8 +151,8 @@ class SwitchboardEngine(object):
         # Load the initial values
         self._update_devices_values()
 
-        # Let iodata now we may have a new table structure
-        self._iodata.reset_table()
+        # Let ws_ctrl now we may have a new table structure
+        self._ws_ctrl.reset_table()
 
 
     def get_modules_using_client(self, client_alias):
@@ -180,8 +180,8 @@ class SwitchboardEngine(object):
             del self.devices[old_device]
         del self.clients[client_alias]
 
-        # Let iodata now we may have a new table structure
-        self._iodata.reset_table()
+        # Let ws_ctrl now we may have a new table structure
+        self._ws_ctrl.reset_table()
 
 
     def upsert_switchboard_module(self, module_name):
@@ -241,7 +241,7 @@ class SwitchboardEngine(object):
         # Wait to complete the poll period
         poll_period = float(self.config.configs['poll_period'])
         time_diff = time.time() - self.prev_cycle_time
-        sleep_time =  max(0.0, poll_period - time_diff)
+        sleep_time = max(0.0, poll_period - time_diff)
         time.sleep(sleep_time)
         self.prev_cycle_time = time.time()
 
@@ -255,8 +255,8 @@ class SwitchboardEngine(object):
                 for module in self.modules.values():
                     module()
 
-        # Update iodata agents
-        self._iodata.take_snapshot(self.clients, self.devices)
+        # Update ws_ctrl agents
+        self._ws_ctrl.take_snapshot(self.clients, self.devices)
 
 
     def set_remote_device_value(self, device, value):

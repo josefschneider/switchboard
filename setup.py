@@ -22,7 +22,10 @@ class PyTest(TestCommand):
 
 
 def get_console_scripts():
-    console_scripts = [ 'switchboard=switchboard.__main__:main' ]
+    console_scripts = [
+        'switchboard=switchboard.__main__:main',
+        'swbclient=cli.__main__:main'
+    ]
     setup_py_path = os.path.dirname(os.path.realpath(__file__))
     apps_dir = setup_py_path + '/apps'
 

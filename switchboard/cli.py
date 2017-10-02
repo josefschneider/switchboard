@@ -3,6 +3,7 @@
 import cmd
 import sys
 
+from switchboard.config import CONFIG_OPTS
 from switchboard.engine import EngineError
 from switchboard.utils import colour_text, get_input, is_float
 
@@ -38,16 +39,15 @@ class SwitchboardCli(cmd.Cmd, object):
                 f(self, line)
         return wrapper
 
-    def __init__(self, swb, config, iodata, app_manager):
+    def __init__(self, swb, config, app_manager):
         super(SwitchboardCli, self).__init__()
         self._swb = swb
         self._config = config
-        self._iodata = iodata
         self._app_manager = app_manager
 
         # Pre-load the possible config variables for auto-completion
         self._config_vars = { }
-        for key, opt in self._config.CONFIG_OPTS.items():
+        for key, opt in CONFIG_OPTS.items():
             if opt['type'] == str:
                 self._config_vars[key] = opt
 

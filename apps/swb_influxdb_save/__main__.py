@@ -98,7 +98,7 @@ class InfluxDBSave(AgentBase):
 
 
     def update_io_data(self, state_table, updates):
-        # If we're about to resend the entire table might as well do it now
+        # If we'll be sending the entire table soon, so might as well do it now
         if time.time() - self._last_resend_time > self.RESEND_PERIOD - 2:
             self.reset_io_data(state_table)
             return

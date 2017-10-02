@@ -42,9 +42,13 @@ class AppManager:
             print('Cannot kill {} app as it was not launched by Switchboard'.format(app))
             return
 
-        self._terminate(self.apps_running[app])
-        self._swb.remove_client(self._configs.get('apps')[app]['client_alias'])
+        # If the app has a client alias it means we are dealing with a Switchboard
+        # device client and need to remove it
+        if 'client_alias' in self._configs.get('apps')[app]:
+            self._swb.remove_client(self._configs.get('apps')[app]['client_alias'])
+
         self._configs.remove_app(app)
+        self._terminate(self.apps_running[app])
 
     def launch(self, app):
         # Get the required config options for this app
@@ -75,18 +79,19 @@ class AppManager:
 
         command = app
         for name, arg_info in args.items():
-            # Pre-populate as many arguments as possible...
-            if name == 'IOData port':
-                command += format_arg(arg_info, self._configs.get('iodata_port'))
-            elif name == 'IOData host':
+            # Pre-populate as many arguments as possible
+            if name == 'WSIOData port':
+                command += format_arg(arg_info, self._configs.get('ws_port'))
+            elif name == 'WSIOData host':
                 command += format_arg(arg_info, 'localhost')
             elif name == 'Client port':
                 client_port = get_free_port()
                 command += format_arg(arg_info, client_port)
             elif name == 'autokill':
+                # Because this app is being launched by Switchboard we want it to die when Switchboard dies
                 command += ' --autokill'
             else:
-                # ...for every other argument prompt the user
+                # For every other argument prompt the user
                 kwargs = arg_info['kwargs']
                 help = kwargs['help']
 
@@ -112,7 +117,7 @@ class AppManager:
 
         app_configs['command'] = command
 
-        # If this is a client app we need to add it
+        # If this is a client app get the client alias
         if client_port:
             app_configs['client_port'] = client_port
             alias = get_input('Please enter a client alias: ')
@@ -131,6 +136,7 @@ class AppManager:
 
         self.apps_running[app] = p.pid
 
+        # If this is a Switchboard device client we need to add it
         if 'client_port' in app_configs or 'client_alias' in app_configs:
             if 'client_port' in app_configs and 'client_alias' in app_configs:
                 remaining_attempts = 5
