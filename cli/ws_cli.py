@@ -41,10 +41,8 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                 f(self, line)
         return wrapper
 
-    def __init__(self, host, port):
-        super(SwitchboardWSCli, self).__init__()
-        self.host = host
-        self.port = port
+    def __init__(self, stdin=sys.stdin, stdout=sys.stdout):
+        super(SwitchboardWSCli, self).__init__(stdin=stdin, stdout=stdout)
         self.config_received = False
 
         # Pre-load the possible config variables for auto-completion
@@ -68,10 +66,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def update_current_config(self, config):
         self.config_received = True
 
-    def run(self):
+    def run(self, host, port):
         ''' Run the websocket client in a separate thread '''
         thread = Thread(target=self.ws_client.run_ws_client,
-                kwargs={'host':self.host, 'port':self.port, 'autokill':True})
+                kwargs={'host':host, 'port':port, 'autokill':True})
         thread.daemon = True
         thread.start()
 

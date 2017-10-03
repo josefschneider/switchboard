@@ -10,9 +10,9 @@ def main():
     arg_parser.add_argument('-p', '--port', help='Switchboard control port to connect to', default='41200')
     arg_parser.add_argument('--host', help='Switchboard control host to connect to', default='localhost')
     args = arg_parser.parse_args()
-    cli = SwitchboardWSCli(args.host, args.port)
+    cli = SwitchboardWSCli()
     cli.ws_client = WSCtrlClient(ws_handler=cli)
-    cli.run()
+    cli.run(args.host, args.port)
 
 if __name__ == '__main__':
     main()
