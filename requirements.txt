@@ -1,3 +1,5 @@
 requests
 termcolor
+bottle
 bottle_websocket
+gevent
