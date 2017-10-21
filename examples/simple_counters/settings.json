@@ -1,5 +1,5 @@
 {
-    "poll_period": "1",
+    "poll_period": "1.0",
     "clients": {
         "client1": {
             "url": "http://localhost:51000"
@@ -11,7 +11,13 @@
     "modules": [
         "test_module.module"
     ],
-    "iodata_port": 49001,
-    "apps": {},
+    "ws_port": 44371,
+    "apps": {
+        "swb_system_info": {
+            "command": "swb_system_info --client_port 48941",
+            "client_port": 48941,
+            "client_alias": "sys"
+        }
+    },
     "running": true
 }

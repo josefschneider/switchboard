@@ -15,7 +15,7 @@ from subprocess import Popen, PIPE
 def get_temp():
     p = Popen(['cat', '/sys/class/thermal/thermal_zone0/temp'], stdout = PIPE)
     output, error = p.communicate()
-    if error:
+    if error or not output:
         return None
     return float(output) / 1000.0
 

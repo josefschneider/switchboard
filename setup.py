@@ -11,7 +11,7 @@ class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = [
-            '--doctest-modules', '--verbose',
+            '--doctest-modules', '--verbose', '-s',
             './switchboard', './tests'
         ]
         self.test_suite = True
@@ -58,7 +58,9 @@ install_requires = [
     'termcolor',
     'bottle',
     'bottle_websocket',
-    'gevent'
+    'gevent',
+    'websocket',
+    'psutil'
 ]
 
 

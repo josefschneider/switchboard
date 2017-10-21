@@ -3,3 +3,4 @@ termcolor
 bottle
 bottle_websocket
 gevent
+websocket

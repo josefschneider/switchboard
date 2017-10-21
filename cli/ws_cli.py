@@ -67,6 +67,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         self.config_received = True
 
     def run(self, host, port):
+        print("Starting")
         ''' Run the websocket client in a separate thread '''
         thread = Thread(target=self.ws_client.run_ws_client,
                 kwargs={'host':host, 'port':port, 'autokill':True})
