@@ -3,7 +3,7 @@
 import argparse
 
 from cli.ws_cli import SwitchboardWSCli
-from switchboard.ws_ctrl import WSCtrlClient
+from switchboard.ws_ctrl_client import WSCtrlClient
 
 def main():
     arg_parser = argparse.ArgumentParser()

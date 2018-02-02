@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 
 from switchboard.client import SwitchboardClient
-from switchboard.ws_ctrl import WSIODataClient
+from switchboard.ws_ctrl_client import WSIODataClient
 
 
 def check_port_arg(args, port_name):

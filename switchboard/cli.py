@@ -235,6 +235,7 @@ class SwitchboardCli(cmd.Cmd, object):
     @lock_switchboard
     def do_enable(self, line):
         self._swb.enable_switchboard_module(line)
+        self._config.enable_module(line)
 
     def complete_enable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.modules)
@@ -247,6 +248,7 @@ class SwitchboardCli(cmd.Cmd, object):
     @lock_switchboard
     def do_disable(self, line):
         self._swb.disable_switchboard_module(line)
+        self._config.disable_module(line)
 
     def complete_disable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self._swb.modules)

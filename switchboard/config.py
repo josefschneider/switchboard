@@ -24,9 +24,9 @@ CONFIG_OPTS = {
             'type': dict
         },
         'modules': {
-            'test': lambda x: isinstance(x, list),
-            'limit': 'a list',
-            'type': list
+            'test': lambda x: isinstance(x, dict),
+            'limit': 'a dict',
+            'type': dict
         },
         'ws_port': {
             'test': lambda x: x > 0 and x < 65536,
@@ -109,13 +109,20 @@ class SwitchboardConfig:
 
 
     def add_module(self, module):
-        self.configs['modules'].append(module)
+        self.configs['modules'][module] = 'enabled'
         self._save_config()
 
     def remove_module(self, module):
-        for m in list(self.configs['modules']):
-            if m == module:
-                self.configs['modules'].remove(m)
+        if module in self.configs['modules']:
+            del self.configs['modules'][module]
+        self._save_config()
+
+    def enable_module(self, module):
+        self.configs['modules'][module] = 'enabled'
+        self._save_config()
+
+    def disable_module(self, module):
+        self.configs['modules'][module] = 'disabled'
         self._save_config()
 
 

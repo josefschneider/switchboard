@@ -5,7 +5,7 @@ import sys
 import time
 
 from threading import Thread
-from switchboard.ws_ctrl import WSCtrlHandlerBase
+from switchboard.ws_ctrl_client import WSCtrlHandlerBase
 from switchboard.utils import colour_text, get_input, is_float
 
 from switchboard.config import CONFIG_OPTS
@@ -67,7 +67,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         self.config_received = True
 
     def run(self, host, port):
-        print("Starting")
+        print('Starting')
         ''' Run the websocket client in a separate thread '''
         thread = Thread(target=self.ws_client.run_ws_client,
                 kwargs={'host':host, 'port':port, 'autokill':True})
@@ -102,7 +102,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('                             add client and give it a specific')
         print('                             poll period in seconds')
 
-    @lock_switchboard
     def do_addclient(self, line):
         parts = line.split()
         if len(parts) < 2 or len(parts) > 3:
@@ -110,17 +109,12 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
             self.help_addclient()
             return
 
-        (client_url, client_alias) = parts[:2]
+        client_url = parts[0]
 
         if not client_url.startswith('http://'):
             client_url = 'http://' + client_url
 
-        print('Adding client')
-#        try:
-#            self._swb.add_client(client_url, *parts[1:])
-#            self._config.add_client(client_url, *parts[1:])
-#        except EngineError as e:
-#            print('Could not add client "{}({})": {}'.format(client_alias, client_url, e))
+        self.ws_client.send('addclient', [client_url] + parts[1:])
 
 
     def help_updateclient(self):
@@ -130,7 +124,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('                             update client and give it a specific poll')
         print('                             period or "None" to poll at every loop')
 
-    @lock_switchboard
     def do_updateclient(self, line):
         parts = line.split()
         if len(parts) < 1 or len(parts) > 2:
@@ -156,13 +149,9 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                 poll_period = parts[1]
             print('Updating time to {}'.format(poll_period))
 
-        print('Updating client')
-#        try:
-#            self._swb.update_client(alias, poll_period)
-#            self._config.add_client(client_info['url'], alias, poll_period)
-#        except EngineError as e:
-#            print('Could not update client "{}": {}'.format(line, e))
+        self.ws_client.send('updateclient', [alias, poll_period])
 
+    @lock_switchboard
     def complete_updateclient(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['clients'].keys())
 
@@ -171,10 +160,14 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('launchapp [app]      launches app and connects to it if neccesary')
 
-    @lock_switchboard
     def do_launchapp(self, line):
-        print('Launching app')
-#        self._app_manager.launch(line)
+        parts = line.split()
+        if not len(parts) is 1:
+            print('"launchapp" command expects one parameter')
+            self.help_launchapp()
+            return
+
+        self.ws_client.send('launchapp', parts)
 
     def complete_launchapp(self, text, line, begidx, endidx):
         return AutoComplete(text, line, APP_LIST)
@@ -220,7 +213,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     @lock_switchboard
     def do_remove(self, line):
         if line in self.ws_client.swb_config['modules']:
-            print("Removing module")
+            print('Removing module')
 #            try:
 #                self._swb.remove_module(line)
 #                self._config.remove_module(line)
@@ -267,7 +260,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
     @lock_switchboard
     def do_enable(self, line):
-        print("Enable switchboard module")
+        print('Enable switchboard module')
 #        self._swb.enable_switchboard_module(line)
 
     def complete_enable(self, text, line, begidx, endidx):
@@ -280,7 +273,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
     @lock_switchboard
     def do_disable(self, line):
-        print("Disable switchboard module")
+        print('Disable switchboard module')
 #        self._swb.disable_switchboard_module(line)
 
     def complete_disable(self, text, line, begidx, endidx):
@@ -366,23 +359,23 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
             for app in self.ws_client.swb_config['apps']:
                 print('\t{}'.format(app))
 
-#        elif line.lower() in 'modules':
-#            modules = self.ws_client.swb_config['modules']
-#            spacing = get_max_length_str(modules) + 4
-#            if len(modules) == 0:
-#                print('No modules loaded')
-#            else:
-#                print('Modules loaded:')
-#                for m, m_obj in self._swb.modules.items():
-#                    if m_obj.module_class.enabled:
-#                        status = colour_text('Enabled', 'green')
-#                    else:
-#                        status = colour_text('Disabled', 'blue')
-#
-#                    print('\t{mod:{width}}{status}'.format(
-#                        mod=m,
-#                        width=spacing,
-#                        status=status))
+        elif line.lower() in 'modules':
+            modules = self.ws_client.swb_config['modules']
+            spacing = get_max_length_str(modules) + 4
+            if len(modules) == 0:
+                print('No modules loaded')
+            else:
+                print('Modules loaded:')
+                for m, s in modules.items():
+                    if s == 'enabled':
+                        status = colour_text('Enabled', 'green')
+                    else:
+                        status = colour_text('Disabled', 'blue')
+
+                    print('\t{mod:{width}}{status}'.format(
+                        mod=m,
+                        width=spacing,
+                        status=status))
 
         else:
             print('Unkown list command "{}"'.format(line))

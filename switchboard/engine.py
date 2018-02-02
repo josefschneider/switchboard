@@ -63,9 +63,9 @@ class SwitchboardEngine(object):
         ''' Initialise the switchboard modules according to the config file '''
         if self.config.get('modules'):
             print("Initialising switchboard modules...")
-            for module in self.config.get('modules'):
+            for module, state in self.config.get('modules').items():
                 try:
-                    self.upsert_switchboard_module(module)
+                    self.upsert_switchboard_module(module, state=='enabled')
                 except Exception as e:
                     sys.exit('Error adding module {}: {}'.format(module, e))
 
@@ -184,11 +184,11 @@ class SwitchboardEngine(object):
         self._ws_ctrl.reset_table()
 
 
-    def upsert_switchboard_module(self, module_name):
+    def upsert_switchboard_module(self, module_name, enabled=False):
         # Instantiate the module and update data structures
         print('Adding module {}'.format(module_name))
         swbmodule = load_attribute(module_name)
-        swbmodule.module_class.enabled = True
+        swbmodule.module_class.enabled = enabled
         self.modules[module_name] = swbmodule
 
         # Make sure all the inputs and outputs line up correctly

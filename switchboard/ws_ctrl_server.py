@@ -1,19 +1,16 @@
 
 import json
 import sys
-import copy
-import time
 from threading import Thread, Lock
 
 from bottle import Bottle, static_file
 from bottle.ext.websocket import GeventWebSocketServer, websocket
 
-import websocket as ws_client
-
 import os
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 from switchboard.utils import get_free_port
+from switchboard.command_decoder import CommandDecoder
 
 
 def _make_state_table(clients):
@@ -41,6 +38,9 @@ class WSCtrlServer:
 
     def __init__(self, config):
         self._config = config
+        self._decoder = None
+
+        # Register the callback to be executed whenever the config is updated
         self._config.register_config_update_handler(
                 lambda self=self: self.send_current_config(self._ctrl_clients))
 
@@ -52,6 +52,10 @@ class WSCtrlServer:
 
         self._iodata_clients = set()
         self._ctrl_clients = set()
+
+    def set_engine(self, engine):
+        assert not self._decoder
+        self._decoder = CommandDecoder(self._config, engine)
 
     def init_config(self):
         self.port = self._config.get('ws_port')
@@ -94,17 +98,15 @@ class WSCtrlServer:
         ''' A ctrl connection receives IOData, status etc. and has full control over Switchboard '''
         with self._lock:
             self._ctrl_clients.add(ws)
-            self._iodata_clients.add(ws)
-            self.send_state_table([ws])
             self.send_current_config([ws])
 
         while True:
             msg = ws.receive()
             if msg is None:
                 break
+            self._decoder.decode_ctrl_command(ws, msg)
 
         with self._lock:
-            self._iodata_clients.remove(ws)
             self._ctrl_clients.remove(ws)
 
     def _determine_table_updates(self, devices):
@@ -163,147 +165,3 @@ class WSCtrlServer:
         data = { 'command': 'update_config', 'config': self._config.configs }
         for ws in wss:
             ws.send(json.dumps(data))
-
-
-class WSIODataClient(object):
-    def __init__(self, ws_handler, **kwargs):
-        if not isinstance(ws_handler, WSIODataHandlerBase):
-            print('Invalid handler type: has to inherit from WSIODataHandlerBase')
-            sys.exit(1)
-
-        # The last known state of the Switchboard IOs
-        self.current_state_table = []
-
-        # Map pointing to client info entries for faster client access when updating
-        self.swb_clients = {}
-
-        # Map pointing to device info entries for faster device access when updating
-        self.devices = {}
-
-        # Lock used to synchronise access to the data made available by this client
-        self.lock = Lock()
-
-        self.ws_handler = ws_handler
-        super(WSIODataClient, self).__init__(**kwargs)
-
-    def _create_current_state_table(self, table):
-        with self.lock:
-            self.current_state_table = copy.deepcopy(table)
-
-        self.current_state_table.sort(key=lambda x: x['client_alias'])
-
-        self.swb_clients = {}
-        self.devices = {}
-
-        for client_entry in self.current_state_table:
-            self.swb_clients[client_entry['client_alias']] = client_entry
-            client_entry['devices'].sort(key=lambda x: x['name'])
-            for device in client_entry['devices']:
-                self.devices[device['name']] = device
-
-    def _update_current_state_table(self, updates):
-        with self.lock:
-            for update in updates:
-                device = self.devices[update['device']]
-                device['last_update_time'] = update['last_update_time']
-                device['value'] = update['value']
-                device['last_set_value'] = update['last_set_value']
-
-    def on_iodata_message(self, ws, message):
-        msg_data = json.loads(message)
-        if msg_data['command'] == 'update_table':
-            self._create_current_state_table(msg_data['table'])
-            self.ws_handler.reset_io_data(self.current_state_table)
-
-        elif msg_data['command'] == 'update_fields':
-            updates = msg_data['fields']
-            self._update_current_state_table(updates)
-            self.ws_handler.update_io_data(self.current_state_table, updates)
-
-    def on_error(self, ws, error):
-        print('Error: "{}" for {}'.format(error, ws.url))
-        self.ws_handler.disconnected(ws)
-
-    def run_ws_client(self, host, port, autokill):
-        while True:
-            ws = ws_client.WebSocketApp('ws://{}:{}/ws_iodata'.format(host, port),
-                    on_message=self.on_iodata_message,
-                    on_error=self.on_error,
-                    on_close=self.ws_handler.disconnected,
-                    on_open=self.ws_handler.connected)
-
-            ws.run_forever()
-            if autokill:
-                break
-
-            self.current_state_table = []
-            self.devices = {}
-            time.sleep(1)
-
-
-class WSCtrlClient(WSIODataClient):
-    def __init__(self, ws_handler, **kwargs):
-        if not isinstance(ws_handler, WSCtrlHandlerBase):
-            print('Invalid handler type: has to inherit from WSCtrlHandlerBase')
-            sys.exit(1)
-
-        # Stores the last known state of the Switchboard config
-        self.swb_config = {}
-
-        self.ws_handler = ws_handler
-        super(WSCtrlClient, self).__init__(ws_handler=ws_handler, **kwargs)
-
-    def on_ctrl_message(self, ws, message):
-        msg_data = json.loads(message)
-        if msg_data['command'] == 'update_config':
-            with self.lock:
-                self.swb_config = copy.deepcopy(msg_data['config'])
-            self.ws_handler.update_current_config(self.swb_config)
-
-    def run_ws_client(self, **kwargs):
-        thread = Thread(target=self._run_ws_client, kwargs=kwargs)
-        thread.daemon = True
-        thread.start()
-
-        super(WSCtrlClient, self).run_ws_client(**kwargs)
-
-    def _run_ws_client(self, host, port, autokill):
-        while True:
-            ws = ws_client.WebSocketApp('ws://{}:{}/ws_ctrl'.format(host, port),
-                    on_message=self.on_ctrl_message,
-                    on_error=self.on_error,
-                    on_close=self.ws_handler.disconnected,
-                    on_open=self.ws_handler.connected)
-
-            ws.run_forever()
-            if autokill:
-                break
-
-            self.swb_config = {}
-            time.sleep(1)
-
-
-class WSIODataHandlerBase:
-    ''' Base class that every WSIODataClient should inherit from '''
-    def connected(self, ws):
-        '''connected method which is called when the server connects'''
-        raise NotImplementedError(self.connected.__doc__)
-
-    def disconnected(self, ws):
-        '''disconnected method which is called when the server disconnects'''
-        raise NotImplementedError(self.disconnected.__doc__)
-
-    def update_io_data(self, state_table, updates):
-        '''update_io_data method required to update device values'''
-        raise NotImplementedError(self.update_io_data.__doc__)
-
-    def reset_io_data(self, state_table):
-        '''reset_io_data method required to indicate a possible state table format change'''
-        raise NotImplementedError(self.reset_io_data.__doc__)
-
-
-class WSCtrlHandlerBase(WSIODataHandlerBase):
-    ''' Base class that every WSCtrlClient should inherit from '''
-    def update_current_config(self, config):
-        '''update_current_config method required to update the current Switchboard config'''
-        raise NotImplementedError(self.update_current_config.__doc__)
