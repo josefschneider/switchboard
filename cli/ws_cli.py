@@ -67,7 +67,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         self.config_received = True
 
     def run(self, host, port):
-        print('Starting')
+        sys.stdout.write('Establishing connection')
         ''' Run the websocket client in a separate thread '''
         thread = Thread(target=self.ws_client.run_ws_client,
                 kwargs={'host':host, 'port':port, 'autokill':True})
@@ -76,8 +76,11 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
         while not self.config_received:
             time.sleep(0.1)
+            sys.stdout.write('.')
 
-        ''' Put the blocking cmd input loop in one thread '''
+        print('\nConnection established!')
+
+        ''' Execute the blocking cmd input loop '''
         self.update_prompt()
         self.cmdloop()
 

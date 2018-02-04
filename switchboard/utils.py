@@ -77,3 +77,8 @@ def load_attribute(attribute):
 
     # Get the attribute and return it
     return getattr(pymodule_instance, attribute_name)
+
+
+def is_set(collection, key):
+    ''' Returns true if the key exists in the collection and if the entry value is set '''
+    return key in collection and collection[key]

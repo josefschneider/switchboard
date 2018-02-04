@@ -12,7 +12,7 @@ except:
 
 import websocket
 
-from switchboard.utils import colour_text, get_input
+from switchboard.utils import colour_text, get_input, is_set
 
 
 class WSIODataClient(object):
@@ -117,7 +117,6 @@ class WSCtrlClient(WSIODataClient):
             self.ws_handler.update_current_config(self.swb_config)
 
         elif msg_data['command'] == 'response':
-            print('Client received data: {}'.format(message))
             self.response_queue.put(msg_data)
 
         else:
@@ -153,14 +152,12 @@ class WSCtrlClient(WSIODataClient):
         self.ws.send(json.dumps({'command': command, 'params': params}))
 
         while True:
-            time.sleep(1)
-            print('Polling')
+            time.sleep(0.01)
             if not self.response_queue.empty():
                 if self.handle_response(self.response_queue.get()):
                     return
 
     def handle_response(self, msg_data):
-        print(msg_data)
         if 'display_text' in msg_data:
             text = msg_data['display_text']
 
@@ -170,19 +167,18 @@ class WSCtrlClient(WSIODataClient):
                 elif msg_data['command_status'] == 'WARNING':
                     text = colour_text(text, 'yellow')
 
-            print(text)
+            sys.stdout.write(text)
 
-        if 'get_input' in msg_data and msg_data['get_input']:
+        if is_set(msg_data, 'get_input'):
             assert 'display_text' in msg_data, 'Internal error: can only get input if display_text is set'
-            assert not 'command_finished' in msg_data, 'Internal error: can no finish command if requesting input'
+            assert not is_set(msg_data, 'command_finished'), 'Internal error: can no finish command if requesting input'
 
             user_input = get_input()
-            self.ws_send(json.dumps({'command': 'user_input', 'value': user_input}))
+            self.ws.send(json.dumps({'command': 'user_input', 'text': user_input}))
+        else:
+            print('')
 
-        if 'command_finished' in msg_data and msg_data['command_finished']:
-            return True
-
-        return False
+        return is_set(msg_data, 'command_finished')
 
 
 class WSIODataHandlerBase:

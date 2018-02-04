@@ -23,8 +23,9 @@ class AppManager:
     def init_config(self):
         for app, app_configs in self._configs.get('apps').items():
             print('Starting ' + app)
-            if not self._execute_app(app, app_configs):
-                print('Unable to start app "{}". Please fix config file and restart'.format(app))
+            exec_error = self._execute_app(app, app_configs)
+            if exec_error:
+                print('Unable to start app {}: "{}". Please resolve issue and restart'.format(exec_error))
                 sys.exit(1)
 
     def __enter__(self):
@@ -50,21 +51,21 @@ class AppManager:
         self._configs.remove_app(app)
         self._terminate(self.apps_running[app])
 
-    def launch(self, app):
+    def launch(self, app, ui):
         # Get the required config options for this app
         p = Popen(app + ' --getconf', shell=True, stdout=PIPE, preexec_fn=os.setsid)
+
+        # With the --getconf argument the app should quit immediately
         time.sleep(0.1)
 
         if not p.poll() == None:
             self._terminate(p.pid)
-            print('Error: app hangs when getting config options')
-            return
+            yield ui.response_error('Error: app hangs when getting config options')
 
         output, error = p.communicate()
 
         if error:
-            print('Error: app encountered an error')
-            return
+            yield ui.response_error('Error: app encountered an error')
 
         # If the app is a Switchboard client we connect to it automatically
         client_port = None
@@ -74,8 +75,7 @@ class AppManager:
         try:
             args = json.loads(output)
         except:
-            print('Unable to parse app config definitions')
-            return
+            yield ui.response_error('Unable to parse app config definitions')
 
         command = app
         for name, arg_info in args.items():
@@ -97,22 +97,24 @@ class AppManager:
 
                 if 'action' in kwargs and kwargs['action'] in 'store_true':
                     while True:
-                        value = get_input('{}? [y/n] '.format(help))
+                        value = yield ui.response_text('{}? [y/n] '.format(help), prompt=True)
                         value = value.lower()
+
                         if not value in [ 'y', 'n' ]:
-                            print('Invalid input')
+                            yield ui.response_text('Invalid input')
                             continue
+
                         if value == 'y':
                             command += ' ' + arg_info['args'][0]
                         break
                 else:
                     if 'default' in kwargs:
                         default = ' [{}]'.format(kwargs['default'])
-                        value = get_input('Please enter a value for the {}{}: '.format(help, default))
+                        value = yield ui.response_text('Please enter a value for the {}{}: '.format(help, default), prompt=True)
                         if value:
                             command += format_arg(arg_info, value)
                     else:
-                        value = get_input('Please enter a value for the {}: '.format(help))
+                        value = yield ui.response_text('Please enter a value for the {}: '.format(help), prompt=True)
                         command += format_arg(arg_info, value)
 
         app_configs['command'] = command
@@ -120,19 +122,22 @@ class AppManager:
         # If this is a client app get the client alias
         if client_port:
             app_configs['client_port'] = client_port
-            alias = get_input('Please enter a client alias: ')
+            alias = yield ui.response_text('Please enter a client alias: ', prompt=True)
             app_configs['client_alias'] = alias
 
-        if self._execute_app(app, app_configs):
+        exec_error = self._execute_app(app, app_configs, ui.response_text)
+        if exec_error:
+            yield ui.response_error(exec_error)
+        else:
             self._configs.add_app(app, app_configs)
+            yield ui.response_text('App launched successfully', finished=True)
 
-    def _execute_app(self, app, app_configs):
+    def _execute_app(self, app, app_configs, print_func=print):
         # Launch the app and make sure it hasn't crashed on us
         p = Popen(app_configs['command'], shell=True, preexec_fn=os.setsid)
         time.sleep(1)
         if not p.poll() == None:
-            print('App has terminated unexpectedly with command: "{}"'.format(app_configs['command']))
-            return False
+            return 'App has terminated unexpectedly with command: "{}"'.format(app_configs['command'])
 
         self.apps_running[app] = p.pid
 
@@ -154,14 +159,10 @@ class AppManager:
                         time.sleep(1)
 
                 if remaining_attempts == 0:
-                    print('Unable to connect to app client {}: {}'.format(url, error))
-                    return False
+                    return 'Unable to connect to app client {}: {}'.format(url, error)
 
-                self._swb.add_client(url, app_configs['client_alias'], log_prefix='\t')
+                self._swb.add_client(url, app_configs['client_alias'], log_prefix='\t', print_func=print_func)
 
             else:
                 # This error should only really happen if the config file is corrupted
-                print('Cannot add client, client_port or client_alias not defined')
-                sys.exit(1)
-
-        return True
+                return 'Cannot add client: client_port or client_alias not defined'

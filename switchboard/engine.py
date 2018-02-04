@@ -72,9 +72,9 @@ class SwitchboardEngine(object):
         self.running = self.config.get('running')
 
 
-    def add_client(self, client_url, client_alias, poll_period=None, log_prefix=''):
+    def add_client(self, client_url, client_alias, poll_period=None, log_prefix='', print_func=print):
         polling = ' poll period={}'.format(poll_period) if poll_period else ''
-        print('{}Adding client {}({}){}'.format(log_prefix, client_alias, client_url, polling))
+        print_func('{}Adding client {}({}){}'.format(log_prefix, client_alias, client_url, polling))
 
         if client_alias in self.clients:
             raise EngineError('Client with alias "{}" already exists'.format(client_alias))
@@ -84,10 +84,10 @@ class SwitchboardEngine(object):
                 raise EngineError('Client with URL "{}" already exists with'
                         'alias {}'.format(client_url, client.alias))
 
-        self._upsert_client(client_url, client_alias, poll_period, log_prefix)
+        self._upsert_client(client_url, client_alias, poll_period, log_prefix, print_func=print_func)
 
 
-    def update_client(self, client_alias, poll_period=None, log_prefix=''):
+    def update_client(self, client_alias, poll_period=None, log_prefix='', print_func=print):
         if not client_alias in self.clients:
             raise EngineError('Unkown client alias "{}"'.format(client_alias))
 
@@ -97,7 +97,7 @@ class SwitchboardEngine(object):
         self._upsert_client(client_url, client_alias, poll_period, log_prefix)
 
 
-    def _upsert_client(self, client_url, client_alias, poll_period, log_prefix):
+    def _upsert_client(self, client_url, client_alias, poll_period, log_prefix, print_func):
         ''' Insert or update a Switchboard client. This method throws
             an exception if any issues are encountered and complies to
             the strong exception guarantee (i.e., if an error is raised
@@ -113,7 +113,7 @@ class SwitchboardEngine(object):
 
         # TODO check formatting for client_url + '/devices_value'
         client_devices = req['devices']
-        print('{}Adding devices:'.format(log_prefix))
+        print_func('{}Adding devices:'.format(log_prefix))
 
         new_devices = {}
 
@@ -135,7 +135,7 @@ class SwitchboardEngine(object):
                 raise EngineError(msg)
 
             new_devices[name] = RESTDevice(device, client_url, self.set_remote_device_value)
-            print('{}\t{}'.format(log_prefix, name))
+            print_func('{}\t{}'.format(log_prefix, name))
 
         # In case we are updating a client we need to delete all its
         # known 'old' devices and remove it from the clients dict

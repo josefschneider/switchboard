@@ -53,9 +53,9 @@ class WSCtrlServer:
         self._iodata_clients = set()
         self._ctrl_clients = set()
 
-    def set_engine(self, engine):
+    def set_dependencies(self, engine, app_manager):
         assert not self._decoder
-        self._decoder = CommandDecoder(self._config, engine)
+        self._decoder = CommandDecoder(self._config, engine, app_manager)
 
     def init_config(self):
         self.port = self._config.get('ws_port')

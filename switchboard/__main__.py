@@ -39,7 +39,7 @@ def main():
             else:
                 ws_ctrl_server.init_config()
 
-            ws_ctrl_server.set_engine(swb)
+            ws_ctrl_server.set_dependencies(swb, app_manager)
             swb.start()
             sys.exit(cli.run())
 
