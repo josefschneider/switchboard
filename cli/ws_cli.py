@@ -36,10 +36,39 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def lock_switchboard(f):
         ''' Decorator for functions that need to synchonrise with the
             Switchboard engine before executing '''
-        def wrapper(self, line):
+        def wrapper(self, *args, **kwargs):
             with self.ws_client.lock:
-                f(self, line)
+                f(self, *args, **kwargs)
         return wrapper
+
+    def check_argument_count(argument_count_min, argument_count_max=None):
+        ''' Decorator for "do_" commands to be called from the cmd module.
+            It takes the input, splits it up and makes sure that the
+            desired number of arguments are given '''
+
+        if argument_count_max == None:
+            argument_count_max = argument_count_min
+
+        def argument_wrapper(f):
+            def wrapper(self, line):
+                parts = line.split()
+
+                if len(parts) < argument_count_min or len(parts) > argument_count_max:
+                    command = f.__name__[len('do_'):]
+
+                    if argument_count_min != argument_count_max:
+                        print('"{}" command expects between {} and {} arguments'.format(command, argument_count_min, argument_count_max))
+                    else:
+                        print('"{}" command expects {} argument{}'.format(command, argument_count_min, 's' if argument_count_min == 1 else ''))
+
+                    if hasattr(self, 'help_' + command):
+                         getattr(self, 'help_' + command)()
+
+                else:
+                    f(self, parts)
+            return wrapper
+        return argument_wrapper
+
 
     def __init__(self, stdin=sys.stdin, stdout=sys.stdout):
         super(SwitchboardWSCli, self).__init__(stdin=stdin, stdout=stdout)
@@ -105,19 +134,14 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('                             add client and give it a specific')
         print('                             poll period in seconds')
 
-    def do_addclient(self, line):
-        parts = line.split()
-        if len(parts) < 2 or len(parts) > 3:
-            print('"addclient" command expects two or three parameters')
-            self.help_addclient()
-            return
-
-        client_url = parts[0]
+    @check_argument_count(2, 3)
+    def do_addclient(self, args):
+        client_url = args[0]
 
         if not client_url.startswith('http://'):
             client_url = 'http://' + client_url
 
-        self.ws_client.send('addclient', [client_url] + parts[1:])
+        self.ws_client.send('addclient', [client_url] + args[1:])
 
 
     def help_updateclient(self):
@@ -127,14 +151,9 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('                             update client and give it a specific poll')
         print('                             period or "None" to poll at every loop')
 
-    def do_updateclient(self, line):
-        parts = line.split()
-        if len(parts) < 1 or len(parts) > 2:
-            print('"updateclient" command expects one or two parameters')
-            self.help_updateclient()
-            return
-
-        client_alias = parts[0]
+    @check_argument_count(1, 2)
+    def do_updateclient(self, args):
+        client_alias = args[0]
         if not client_alias in self.ws_client.swb_config['clients']:
             print('Error: Unkown client alias "{}"'.format(client_alias))
             return
@@ -142,14 +161,14 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         client_info = self.ws_client.swb_config['clients'][client_alias]
         poll_period = client_info['poll_period'] if 'poll_period' in client_info else None
 
-        if len(parts) == 2:
-            if parts[1].lower() == 'none':
+        if len(args) == 2:
+            if args[1].lower() == 'none':
                 poll_period = None
             else:
-                if not is_float(parts[1]):
+                if not is_float(args[1]):
                     print('Invalid input: poll period needs to be a float or "None"')
                     return
-                poll_period = parts[1]
+                poll_period = args[1]
             print('Updating time to {}'.format(poll_period))
 
         self.ws_client.send('updateclient', [alias, poll_period])
@@ -163,14 +182,9 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('launchapp [app]      launches app and connects to it if neccesary')
 
-    def do_launchapp(self, line):
-        parts = line.split()
-        if not len(parts) is 1:
-            print('"launchapp" command expects one parameter')
-            self.help_launchapp()
-            return
-
-        self.ws_client.send('launchapp', parts)
+    @check_argument_count(1)
+    def do_launchapp(self, args):
+        self.ws_client.send('launchapp', args)
 
     def complete_launchapp(self, text, line, begidx, endidx):
         return AutoComplete(text, line, APP_LIST)
@@ -180,10 +194,9 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('killapp [app]        kill app that is already running')
 
-    @lock_switchboard
-    def do_killapp(self, line):
-        print('Killing app')
-#        self._app_manager.kill(line)
+    @check_argument_count(1)
+    def do_killapp(self, args):
+        self.ws_client.send('killapp', args)
 
     def complete_killapp(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['apps'].keys())
@@ -193,8 +206,8 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('addmodule [module]   add and enable Switchboard module')
 
-    @lock_switchboard
-    def do_addmodule(self, line):
+    @check_argument_count(1)
+    def do_addmodule(self, args):
         print('Adding module')
 #        try:
 #            self._swb.upsert_switchboard_module(line)
@@ -202,6 +215,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 #        except EngineError as e:
 #            print('Could not add module "{}": {}'.format(line, e))
 
+    @lock_switchboard
     def complete_addmodule(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -213,18 +227,18 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
               '                     clients that were added using the "launchapp" command.\n' +
               '                     Use "killapp" to remove such clients.')
 
-    @lock_switchboard
-    def do_remove(self, line):
-        if line in self.ws_client.swb_config['modules']:
+    @check_argument_count(1)
+    def do_remove(self, args):
+        if args[0] in self.ws_client.swb_config['modules']:
             print('Removing module')
 #            try:
 #                self._swb.remove_module(line)
 #                self._config.remove_module(line)
 #            except EngineError as e:
 #                print('Could not remove module "{}": {}'.format(line, e))
-        elif line in self.ws_client.swb_config['clients'].keys():
+        elif args[0] in self.ws_client.swb_config['clients'].keys():
             try:
-                client = line
+                client = args[0]
 #                modules = self._swb.get_modules_using_client(client)
 #
 #                if len(modules) > 0:
@@ -243,14 +257,15 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                 print('Removed client "{}"'.format(client))
 
             except EngineError as e:
-                print('Could not remove client "{}": {}'.format(line, e))
-        elif not line:
+                print('Could not remove client "{}": {}'.format(args[0], e))
+        elif not args[0]:
             print('Incorrect usa of the remove command')
             self.help_remove()
         else:
-            print('Unkown module or client "{}"'.format(line))
+            print('Unkown module or client "{}"'.format(args[0]))
             self.help_remove()
 
+    @lock_switchboard
     def complete_remove(self, text, line, begidx, endidx):
         return AutoComplete(text, line,
                 list(self.ws_client.swb_config['modules']) +
@@ -399,12 +414,12 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 #    @lock_switchboard
 #    def do_get(self, line):
 #        parts = line.split()
-#        if len(parts) != 1:
+#        if len(args) != 1:
 #            print('"get" command expects one parameter')
 #            self.help_get()
 #            return
 #
-#        target = parts[0]
+#        target = args[0]
 #
 #        if target in self.ws_client.devices:
 #            # Print the value for this device
@@ -438,13 +453,13 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 #
 #    @lock_switchboard
 #    def do_set(self, line):
-#        parts = line.split()
-#        if len(parts) != 2:
+#        args = line.split()
+#        if len(args) != 2:
 #            print('"set" command expects two parameters')
 #            self.help_set()
 #            return
 #
-#        (target, value) = parts
+#        (target, value) = args
 #
 #        if target in self._swb.devices:
 #            self._swb.devices[target].output_signal.set_value(value)

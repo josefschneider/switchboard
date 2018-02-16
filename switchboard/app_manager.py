@@ -38,18 +38,22 @@ class AppManager:
     def _terminate(self, pid):
         os.killpg(os.getpgid(pid), signal.SIGTERM)
 
-    def kill(self, app):
+    def kill(self, app, ui):
         if not app in self.apps_running:
-            print('Cannot kill {} app as it was not launched by Switchboard'.format(app))
-            return
+            yield ui.response_error('Cannot kill {} app as it was not launched by Switchboard'.format(app))
 
         # If the app has a client alias it means we are dealing with a Switchboard
-        # device client and need to remove it
+        # device client and that we need to remove it
         if 'client_alias' in self._configs.get('apps')[app]:
-            self._swb.remove_client(self._configs.get('apps')[app]['client_alias'])
+            alias = self._configs.get('apps')[app]['client_alias']
+            yield ui.response_text('Removing client "{}"'.format(alias))
+            self._swb.remove_client(alias)
 
+        yield ui.response_text('Killing app')
         self._configs.remove_app(app)
         self._terminate(self.apps_running[app])
+        del self.apps_running[app]
+        yield ui.response_text('App "{}" successfully killed'.format(app), finished=True)
 
     def launch(self, app, ui):
         # Get the required config options for this app

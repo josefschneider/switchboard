@@ -88,6 +88,9 @@ class CommandDecoder:
     def launchapp(self, params):
         return self._app_manager.launch(params[0], self)
 
+    def killapp(self, params):
+        return self._app_manager.kill(params[0], self)
+
 
     def response_text(self, text, prompt=False, finished=False, additional_fields={}):
         assert not (prompt and finished), 'Can only prompt or finish, but not both'
