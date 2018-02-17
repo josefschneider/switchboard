@@ -46,6 +46,9 @@ class MockSwitchboardClient:
         }
         self.devices = { 'sys.core_count.i': self.swb_clients['sys']['devices'][0] }
 
+    def send(self, command, args):
+        pass
+
 
 @pytest.fixture(scope='module')
 def cli_fixture(request):
@@ -69,8 +72,37 @@ def cli_fixture(request):
     return f
 
 
+def test_check_argument_count():
+    do_f1 = MagicMock()
+    do_f2 = MagicMock()
+    do_f1.__name__ = 'do_f1'
+    do_f2.__name__ = 'do_f2'
+
+    class DerivedWSCli(SwitchboardWSCli):
+        def __init__(self):
+            self.test_func_1_arg = SwitchboardWSCli.check_argument_count(1)(do_f1)
+            self.test_func_2_or_3_args = SwitchboardWSCli.check_argument_count(2, 3)(do_f2)
+
+    cli = DerivedWSCli()
+    # Test incorrect number of arguments
+    cli.test_func_1_arg(cli, '')
+    cli.test_func_1_arg(cli, 'arg1 arg2')
+    cli.test_func_2_or_3_args(cli, 'arg1')
+    cli.test_func_2_or_3_args(cli, 'arg1 arg2 arg3 arg4')
+    do_f1.assert_not_called()
+    do_f2.assert_not_called()
+
+    # Now test with correct number of arguments and make sure the functions have been called
+    cli.test_func_1_arg(cli, 'arg1')
+    cli.test_func_2_or_3_args(cli, 'arg1 arg2')
+    cli.test_func_2_or_3_args(cli, 'arg1 arg2 arg3')
+    do_f1.assert_called_once()
+    do_f2.call_count == 2
+
+
 COMMANDS = [
     {  'name': 'addclient',     'args': ['localhost:51000', 'client1'] },
+    {  'name': 'addclient',     'args': ['localhost:51000', 'client1', '1.3'] },
     {  'name': 'addmodule',     'args': ['test_module.module'] },
     {  'name': 'disable',       'args': ['test_module.module'] },
     {  'name': 'enable',        'args': ['test_module.module'] },
@@ -87,6 +119,7 @@ COMMANDS = [
     {  'name': 'start',         'args': [] },
     {  'name': 'stop',          'args': [] },
     {  'name': 'updateclient',  'args': ['client1'] },
+    {  'name': 'updateclient',  'args': ['client1', '1.3'] },
 ]
 
 def test_commands(cli_fixture):

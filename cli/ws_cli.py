@@ -171,7 +171,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                 poll_period = args[1]
             print('Updating time to {}'.format(poll_period))
 
-        self.ws_client.send('updateclient', [alias, poll_period])
+        self.ws_client.send('updateclient', [client_alias, poll_period])
 
     @lock_switchboard
     def complete_updateclient(self, text, line, begidx, endidx):
