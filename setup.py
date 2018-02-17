@@ -60,7 +60,7 @@ install_requires = [
     'bottle',
     'bottle_websocket',
     'gevent',
-    'websocket',
+    'websocket-client',
     'psutil'
 ]
 

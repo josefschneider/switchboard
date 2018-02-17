@@ -49,7 +49,7 @@ class CommandDecoder:
             elif hasattr(self, msg['command']):
                 # Get the iterator for a new command
                 f = getattr(self, msg['command'])
-                self._unfinished_command = f(msg['params'])
+                self._unfinished_command = f(msg['args'])
                 command_state = next(self._unfinished_command)
 
             else:
@@ -62,8 +62,8 @@ class CommandDecoder:
 
 
     # Implementations of the commands supported
-    def addclient(self, params):
-        (client_url, client_alias) = params
+    def addclient(self, args):
+        (client_url, client_alias) = args
         try:
             self._engine.add_client(client_url, client_alias)
             self._config.add_client(client_url, client_alias)
@@ -71,8 +71,8 @@ class CommandDecoder:
         except EngineError as e:
             yield self.response_error('Could not add client "{}({})": {}'.format(client_alias, client_url, e))
 
-    def updateclient(self, params):
-        (client_alias, poll_period) = params
+    def updateclient(self, args):
+        (client_alias, poll_period) = args
         client_info = self._config['clients'][client_alias]
 
         try:
@@ -82,14 +82,14 @@ class CommandDecoder:
         except EngineError as e:
             yield self.response_error('Could not update client "{}": {}'.format(client_alias, e))
 
-    def launchapp(self, params):
-        return self._app_manager.launch(params[0], self)
+    def launchapp(self, args):
+        return self._app_manager.launch(args[0], self)
 
-    def killapp(self, params):
-        return self._app_manager.kill(params[0], self)
+    def killapp(self, args):
+        return self._app_manager.kill(args[0], self)
 
-    def addmodule(self, params):
-        module_name = params[0]
+    def addmodule(self, args):
+        module_name = args[0]
         try:
             self._engine.upsert_switchboard_module(module_name)
             self._config.add_module(module_name)
@@ -97,7 +97,7 @@ class CommandDecoder:
         except EngineError as e:
             yield self.response_error('Could not add module "{}": {}'.format(line, e))
 
-    def remove(self, params):
+    def remove(self, args):
         if args[0] in self._config['modules']:
             module = args[0]
             try:

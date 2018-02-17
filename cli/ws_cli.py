@@ -427,7 +427,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('start                starts switchboard (poll_period must be set)')
 
     @check_argument_count(0)
-    def do_start(self, line):
+    def do_start(self, args):
         if not self.ws_client.swb_config['running']:
             self.ws_client.send('start')
         else:
@@ -439,7 +439,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('stop                 stops switchboard')
 
     @check_argument_count(0)
-    def do_stop(self, line):
+    def do_stop(self, args):
         if self.ws_client.swb_config['running']:
             self.ws_client.send('stop')
         else:
