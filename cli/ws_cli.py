@@ -208,12 +208,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
     @check_argument_count(1)
     def do_addmodule(self, args):
-        print('Adding module')
-#        try:
-#            self._swb.upsert_switchboard_module(line)
-#            self._config.add_module(line)
-#        except EngineError as e:
-#            print('Could not add module "{}": {}'.format(line, e))
+        self.ws_client.send('addmodule', args)
 
     @lock_switchboard
     def complete_addmodule(self, text, line, begidx, endidx):
@@ -229,41 +224,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
     @check_argument_count(1)
     def do_remove(self, args):
-        if args[0] in self.ws_client.swb_config['modules']:
-            print('Removing module')
-#            try:
-#                self._swb.remove_module(line)
-#                self._config.remove_module(line)
-#            except EngineError as e:
-#                print('Could not remove module "{}": {}'.format(line, e))
-        elif args[0] in self.ws_client.swb_config['clients'].keys():
-            try:
-                client = args[0]
-#                modules = self._swb.get_modules_using_client(client)
-#
-#                if len(modules) > 0:
-#                    p = get_input('Warning, modules {} depend on client {} and will '
-#                                  'also be removed. Would you like to proceed? [y/n] '
-#                                  ''.format(modules, client))
-#                    if p.lower() != 'y':
-#                        print('Client not removed')
-#                        return
-#                    for module in modules:
-#                        self._swb.remove_module(module)
-#                        self._config.remove_module(module)
-#
-#                self._swb.remove_client(client)
-#                self._config.remove_client(client)
-                print('Removed client "{}"'.format(client))
-
-            except EngineError as e:
-                print('Could not remove client "{}": {}'.format(args[0], e))
-        elif not args[0]:
-            print('Incorrect usa of the remove command')
-            self.help_remove()
-        else:
-            print('Unkown module or client "{}"'.format(args[0]))
-            self.help_remove()
+        self.ws_client.send('remove', args)
 
     @lock_switchboard
     def complete_remove(self, text, line, begidx, endidx):
@@ -276,11 +237,11 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('enable [module]      enable Switchboard module')
 
-    @lock_switchboard
-    def do_enable(self, line):
-        print('Enable switchboard module')
-#        self._swb.enable_switchboard_module(line)
+    @check_argument_count(1)
+    def do_enable(self, args):
+        self.ws_client.send('enable', args)
 
+    @lock_switchboard
     def complete_enable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -289,11 +250,11 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('disable [module]     disable Switchboard module')
 
-    @lock_switchboard
-    def do_disable(self, line):
-        print('Disable switchboard module')
-#        self._swb.disable_switchboard_module(line)
+    @check_argument_count(1)
+    def do_disable(self, args):
+        self.ws_client.send('disable', args)
 
+    @lock_switchboard
     def complete_disable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -306,8 +267,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('list apps            list all the running apps')
         print('list modules         list all the loaded modules')
 
+    @check_argument_count(1)
     @lock_switchboard
-    def do_list(self, line):
+    def do_list(self, args):
+        target = args[0]
         def iter_clients():
             if not self.ws_client.swb_clients:
                 print('No clients registered')
@@ -330,11 +293,11 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
         clients = self.ws_client.swb_clients
 
-        if not line:
+        if not target:
             print('Empty list argument')
             self.help_list()
 
-        elif line.lower() in 'clients':
+        elif target.lower() in 'clients':
             spacing = get_max_length_str(clients.keys()) + 4
             for name, client_obj in iter_clients():
                 if 'poll_period' in client_obj:
@@ -349,7 +312,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                     status=get_status(client_obj)
                 ))
 
-        elif line.lower() in 'devices':
+        elif target.lower() in 'devices':
             spacing = get_max_length_str(self.ws_client.devices.keys()) + 4
             for name, client_obj in iter_clients():
                 print('{}'.format(name))
@@ -359,7 +322,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                         width=spacing,
                         status=get_status(device_obj)))
 
-        elif line.lower() in 'values':
+        elif target.lower() in 'values':
             spacing = get_max_length_str(self.ws_client.devices.keys()) + 4
             for name, client_obj in iter_clients():
                 print('{}'.format(name))
@@ -372,12 +335,12 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                         width=spacing,
                         value=value))
 
-        elif line.lower() in 'apps':
+        elif target.lower() in 'apps':
             print('Apps running:')
             for app in self.ws_client.swb_config['apps']:
                 print('\t{}'.format(app))
 
-        elif line.lower() in 'modules':
+        elif target.lower() in 'modules':
             modules = self.ws_client.swb_config['modules']
             spacing = get_max_length_str(modules) + 4
             if len(modules) == 0:
@@ -396,7 +359,7 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
                         status=status))
 
         else:
-            print('Unkown list command "{}"'.format(line))
+            print('Unkown list command "{}"'.format(target))
             self.help_list()
 
     def complete_list(self, text, line, begidx, endidx):
@@ -404,93 +367,69 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         return AutoComplete(text, line, options)
 
 
-#    def help_get(self):
-#        print('Usage:')
-#        print('get [device]         show value of device')
-#        print('get [config]         show value of a config option')
-#        for key, opt in self._config_vars.items():
-#            print('get {:<17}{}'.format(key, opt['desc']))
-#
-#    @lock_switchboard
-#    def do_get(self, line):
-#        parts = line.split()
-#        if len(args) != 1:
-#            print('"get" command expects one parameter')
-#            self.help_get()
-#            return
-#
-#        target = args[0]
-#
-#        if target in self.ws_client.devices:
-#            # Print the value for this device
-#            device = self.ws_client.devices[target]
-#            if not device.is_input:
-#                print('Error: device {} not readable'.format(device.name))
-#            else:
-#                print('{}: {}'.format(device.name, device.value))
-#
-#        elif target.lower() in list(self._config_vars.keys()):
-#            print('{}: {}'.format(target, self._config.get(target.lower())))
-#
-#        else:
-#            print('Invalid get target "{}"'.format(target))
-#            self.help_get()
-#
-#    def complete_get(self, text, line, begidx, endidx):
-#        options = list(self._config_vars.keys())
-#        for name, device in self._swb.devices.items():
-#            if device.is_input:
-#                options.append(name)
-#        return AutoComplete(text, line, options)
-#
-#
-#    def help_set(self):
-#        print('Usage:')
-#        print('set [device] [value]    set device to given value')
-#        print('set [config] [value]    set config option to given value')
-#        for key, opt in self._config_vars.items():
-#            print('set {:<19} {}'.format(key + " [value]", opt['desc']))
-#
-#    @lock_switchboard
-#    def do_set(self, line):
-#        args = line.split()
-#        if len(args) != 2:
-#            print('"set" command expects two parameters')
-#            self.help_set()
-#            return
-#
-#        (target, value) = args
-#
-#        if target in self._swb.devices:
-#            self._swb.devices[target].output_signal.set_value(value)
-#
-#        elif target.lower() in list(self._config_vars.keys()):
-#            err = self._config.set(target, value)
-#            if err != None:
-#                print('Error: {}'.format(err))
-#
-#        else:
-#            print('Invalid set target "{}"'.format(target))
-#            self.help_get()
-#
-#    def complete_set(self, text, line, begidx, endidx):
-#        options = list(self._config_vars.keys())
-#        for name, device in self._swb.devices.items():
-#            if device.is_output:
-#                options.append(name)
-#        return AutoComplete(text, line, options)
+    def help_get(self):
+        print('Usage:')
+        print('get [device]         show value of device')
+        print('get [config]         show value of a config option')
+        for key, opt in self._config_vars.items():
+            print('get {:<17}{}'.format(key, opt['desc']))
+
+    @check_argument_count(1)
+    def do_get(self, args):
+        target = args[0]
+
+        if target in self.ws_client.devices:
+            # Print the value for this device
+            device = self.ws_client.devices[target]
+            if not device.is_input:
+                print('Error: device {} not readable'.format(device.name))
+            else:
+                print('{}: {}'.format(device.name, device.value))
+
+        elif target.lower() in list(self._config_vars.keys()):
+            print('{}: {}'.format(target, self._config.get(target.lower())))
+
+        else:
+            print('Invalid get target "{}"'.format(target))
+            self.help_get()
+
+    @lock_switchboard
+    def complete_get(self, text, line, begidx, endidx):
+        options = list(self._config_vars.keys())
+        for name, device in self.swb_client.devices.items():
+            if device.is_input:
+                options.append(name)
+        return AutoComplete(text, line, options)
+
+
+    def help_set(self):
+        print('Usage:')
+        print('set [device] [value]    set device to given value')
+        print('set [config] [value]    set config option to given value')
+        for key, opt in self._config_vars.items():
+            print('set {:<19} {}'.format(key + " [value]", opt['desc']))
+
+    @check_argument_count(2)
+    def do_set(self, args):
+        self.ws_client.send('set', args)
+
+    @lock_switchboard
+    def complete_set(self, text, line, begidx, endidx):
+        options = list(self._config_vars.keys())
+        for name, device in self.swb_client.devices.items():
+            if device.is_output:
+                options.append(name)
+        return AutoComplete(text, line, options)
 
 
     def help_start(self):
         print('Usage:')
         print('start                starts switchboard (poll_period must be set)')
 
-    @lock_switchboard
+    @check_argument_count(0)
     def do_start(self, line):
         if not self.ws_client.swb_config['running']:
-            print('Starting Switchboard')
-#            self._swb.running = True
-#            self._config.set('running', True)
+            self.ws_client.send('start')
         else:
             print('Switchboard server already running')
 
@@ -499,12 +438,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         print('Usage:')
         print('stop                 stops switchboard')
 
-    @lock_switchboard
+    @check_argument_count(0)
     def do_stop(self, line):
         if self.ws_client.swb_config['running']:
-            print('Stopping Switchboard')
-#            self._config.set('running', False)
-#            self._swb.running = False
+            self.ws_client.send('stop')
         else:
             print('Switchboard server already stopped')
 

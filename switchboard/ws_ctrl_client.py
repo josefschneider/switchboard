@@ -144,7 +144,7 @@ class WSCtrlClient(WSIODataClient):
             self.swb_config = {}
             time.sleep(1)
 
-    def send(self, command, params):
+    def send(self, command, params=[]):
         # There should be nothing in the response queue, but just in case there is...
         while not self.response_queue.empty():
             self.response_queue.get()

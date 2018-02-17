@@ -61,16 +61,15 @@ class CommandDecoder:
             self._unfinished_command = None
 
 
+    # Implementations of the commands supported
     def addclient(self, params):
         (client_url, client_alias) = params
         try:
             self._engine.add_client(client_url, client_alias)
             self._config.add_client(client_url, client_alias)
-            self.response_text('Successfully added client "{}({})"'.format(client_alias, client_url), finished=True)
+            yield self.response_text('Successfully added client "{}({})"'.format(client_alias, client_url), finished=True)
         except EngineError as e:
-            self.response_error('Could not add client "{}({})": {}'.format(client_alias, client_url, e))
-
-        yield Status.FINISHED
+            yield self.response_error('Could not add client "{}({})": {}'.format(client_alias, client_url, e))
 
     def updateclient(self, params):
         (client_alias, poll_period) = params
@@ -79,11 +78,9 @@ class CommandDecoder:
         try:
             self._swb.update_client(client_alias, poll_period)
             self._config.add_client(client_info['url'], client_alias, poll_period)
-            self.response_text('Successfully updated client "{}"'.format(client_alias), finished=True)
+            yield self.response_text('Successfully updated client "{}"'.format(client_alias), finished=True)
         except EngineError as e:
-            self.response_error('Could not update client "{}": {}'.format(client_alias, e))
-
-        yield Status.FINISHED
+            yield self.response_error('Could not update client "{}": {}'.format(client_alias, e))
 
     def launchapp(self, params):
         return self._app_manager.launch(params[0], self)
@@ -91,7 +88,88 @@ class CommandDecoder:
     def killapp(self, params):
         return self._app_manager.kill(params[0], self)
 
+    def addmodule(self, params):
+        module_name = params[0]
+        try:
+            self._engine.upsert_switchboard_module(module_name)
+            self._config.add_module(module_name)
+            yield self.response_text('Added module "{}"'.format(module_name))
+        except EngineError as e:
+            yield self.response_error('Could not add module "{}": {}'.format(line, e))
 
+    def remove(self, params):
+        if args[0] in self._config['modules']:
+            module = args[0]
+            try:
+                self._engine.remove_module(module)
+                self._config.remove_module(module)
+                yield self.response_text('Sucessfully removed module "{}"'.format(module), finished=True)
+            except EngineError as e:
+                yield self.response_error('Could not remove module "{}": {}'.format(module, e))
+
+        elif args[0] in self._config['clients'].keys():
+            client = args[0]
+            try:
+                modules = self._engine.get_modules_using_client(client)
+
+                if len(modules) > 0:
+                    p = yield self.response_warning(
+                            'Warning: modules {} depend on client {} and will '
+                            'also be removed. Would you like to proceed? [y/N] '
+                            ''.format(modules, client), prompt=True)
+
+                    if p.strip().lower() != 'y':
+                        yield self.response_text('Client not removed', finished=True)
+
+                    for module in modules:
+                        self._engine.remove_module(module)
+                        self._config.remove_module(module)
+
+                self._engine.remove_client(client)
+                self._config.remove_client(client)
+                yield self.response_text('Removed client "{}"'.format(client), finished=True)
+
+            except EngineError as e:
+                yield self.response_error('Could not remove client "{}": {}'.format(args[0], e))
+
+        else:
+            yield self.response_error('Unkown module or client "{}"'.format(args[0]))
+
+    def enable(self, args):
+        self._engine.enable_switchboard_module(args[0])
+        yield self.response_text('Enabled switchboard module "{}"'.format(args[0]), finished=True)
+
+    def disable(self, args):
+        self._engine.disable_switchboard_module(args[0])
+        yield self.response_text('Disable switchboard module "{}"'.format(args[0]), finished=True)
+
+    def set(self, args):
+        (target, value) = args
+
+        if target in self.swb_client.devices:
+            self.swb_client.devices[target].output_signal.set_value(value)
+
+        elif target.lower() in list(self._config_vars.keys()):
+            err = self._config.set(target, value)
+            if err != None:
+                print('Error: {}'.format(err))
+
+        else:
+            print('Invalid set target "{}"'.format(target))
+            self.help_get()
+
+    def start(self, args):
+        self._engine.running = True
+        self._config.set('running', True)
+        yield self.response_text('Switchboard started', finished=True)
+
+    def stop(self, args):
+        self._engine.running = False
+        self._config.set('running', False)
+        yield self.response_text('Switchboard stopped', finished=True)
+
+
+    # CMD line response functions for the remote client
     def response_text(self, text, prompt=False, finished=False, additional_fields={}):
         assert not (prompt and finished), 'Can only prompt or finish, but not both'
 
