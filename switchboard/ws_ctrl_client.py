@@ -40,16 +40,16 @@ class WSIODataClient(object):
         with self.lock:
             self.current_state_table = copy.deepcopy(table)
 
-        self.current_state_table.sort(key=lambda x: x['client_alias'])
+            self.current_state_table.sort(key=lambda x: x['client_alias'])
 
-        self.swb_clients = {}
-        self.devices = {}
+            self.swb_clients = {}
+            self.devices = {}
 
-        for client_entry in self.current_state_table:
-            self.swb_clients[client_entry['client_alias']] = client_entry
-            client_entry['devices'].sort(key=lambda x: x['name'])
-            for device in client_entry['devices']:
-                self.devices[device['name']] = device
+            for client_entry in self.current_state_table:
+                self.swb_clients[client_entry['client_alias']] = client_entry
+                client_entry['devices'].sort(key=lambda x: x['name'])
+                for device in client_entry['devices']:
+                    self.devices[device['name']] = device
 
     def _update_current_state_table(self, updates):
         with self.lock:

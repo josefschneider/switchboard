@@ -12,6 +12,13 @@ from switchboard.config import CONFIG_OPTS
 from apps.app_list import APP_LIST
 
 
+def is_input(device_name):
+    return 'i' in device_name.split('.')[-1]
+
+def is_output(device_name):
+    return 'o' in device_name.split('.')[-1]
+
+
 def AutoComplete(text, line, options):
     ''' Generic auto-complete function to make it easier to write
         complete_ functions for cmd. text is the text of the current
@@ -173,7 +180,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
 
         self.ws_client.send('updateclient', [client_alias, poll_period])
 
-    @lock_switchboard
     def complete_updateclient(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['clients'].keys())
 
@@ -210,7 +216,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def do_addmodule(self, args):
         self.ws_client.send('addmodule', args)
 
-    @lock_switchboard
     def complete_addmodule(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -226,7 +231,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def do_remove(self, args):
         self.ws_client.send('remove', args)
 
-    @lock_switchboard
     def complete_remove(self, text, line, begidx, endidx):
         return AutoComplete(text, line,
                 list(self.ws_client.swb_config['modules']) +
@@ -241,7 +245,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def do_enable(self, args):
         self.ws_client.send('enable', args)
 
-    @lock_switchboard
     def complete_enable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -254,7 +257,6 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def do_disable(self, args):
         self.ws_client.send('disable', args)
 
-    @lock_switchboard
     def complete_disable(self, text, line, begidx, endidx):
         return AutoComplete(text, line, self.ws_client.swb_config['modules'])
 
@@ -381,10 +383,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
         if target in self.ws_client.devices:
             # Print the value for this device
             device = self.ws_client.devices[target]
-            if not device.is_input:
-                print('Error: device {} not readable'.format(device.name))
+            if not is_input(target):
+                print('Error: device {} not readable'.format(target))
             else:
-                print('{}: {}'.format(device.name, device.value))
+                print('{}: {}'.format(target, device['value']))
 
         elif target.lower() in list(self._config_vars.keys()):
             print('{}: {}'.format(target, self._config.get(target.lower())))
@@ -393,11 +395,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
             print('Invalid get target "{}"'.format(target))
             self.help_get()
 
-    @lock_switchboard
     def complete_get(self, text, line, begidx, endidx):
         options = list(self._config_vars.keys())
-        for name, device in self.swb_client.devices.items():
-            if device.is_input:
+        for name in self.ws_client.devices.keys():
+            if is_input(name):
                 options.append(name)
         return AutoComplete(text, line, options)
 
@@ -413,11 +414,10 @@ class SwitchboardWSCli(cmd.Cmd, WSCtrlHandlerBase):
     def do_set(self, args):
         self.ws_client.send('set', args)
 
-    @lock_switchboard
     def complete_set(self, text, line, begidx, endidx):
         options = list(self._config_vars.keys())
-        for name, device in self.swb_client.devices.items():
-            if device.is_output:
+        for name in self.ws_client.devices.keys():
+            if is_output(name):
                 options.append(name)
         return AutoComplete(text, line, options)
 
