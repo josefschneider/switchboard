@@ -46,7 +46,7 @@ class MockSwitchboardClient:
         }
         self.devices = { 'sys.core_count.i': self.swb_clients['sys']['devices'][0] }
 
-    def send(self, command, args):
+    def send(self, command, args=[]):
         pass
 
 
@@ -115,7 +115,7 @@ COMMANDS = [
     {  'name': 'list',          'args': ['modules'] },
     {  'name': 'list',          'args': ['values'] },
     {  'name': 'remove',        'args': ['client1'] },
-    {  'name': 'set',           'args': ['poll_period'] },
+    {  'name': 'set',           'args': ['poll_period', '2'] },
     {  'name': 'start',         'args': [] },
     {  'name': 'stop',          'args': [] },
     {  'name': 'updateclient',  'args': ['client1'] },

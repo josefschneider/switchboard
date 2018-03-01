@@ -1,5 +1,8 @@
 
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_device_suffix(name):
     ''' Gets the device suffix indicating device type ('.i' for input,
@@ -46,7 +49,7 @@ class SwitchboardDevice(object):
             self.driving_module = None
 
         def set_value(self, value):
-            print('Setting value of {} to {}'.format(self._device.name, value))
+            logger.info('Setting value of {} to {}'.format(self._device.name, value))
             self._device.last_update_time = datetime.now()
             self._device.last_set_value = value
             self._device.set_value(value)

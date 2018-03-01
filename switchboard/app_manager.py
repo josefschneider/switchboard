@@ -5,11 +5,15 @@ import time
 import json
 import signal
 import requests
+import logging
 from subprocess import Popen, PIPE
 
 from switchboard.utils import get_input, get_free_port
 from switchboard.engine import EngineError
 from apps.app_list import APP_LIST
+
+logger = logging.getLogger(__name__)
+
 
 def format_arg(arg_info, value):
     return ' {} {}'.format(arg_info['args'][0], value)
@@ -22,10 +26,10 @@ class AppManager:
 
     def init_config(self):
         for app, app_configs in self._configs.get('apps').items():
-            print('Starting ' + app)
+            logger.info('Starting ' + app)
             exec_error = self._execute_app(app, app_configs)
             if exec_error:
-                print('Unable to start app {}: "{}". Please resolve issue and restart'.format(exec_error))
+                logger.error('Unable to start app {}: "{}". Please resolve issue and restart'.format(exec_error))
                 sys.exit(1)
 
     def __enter__(self):
