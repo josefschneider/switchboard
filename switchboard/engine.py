@@ -45,7 +45,7 @@ class SwitchboardEngine(object):
         # Object used to encode and disseminate the consecutive IO state
         self._ws_ctrl = ws_ctrl
 
-        # Map of client alias -> _Client object
+        # Map of client alias -> _ClientInfo object
         self.clients = {}
 
         # Map of module name -> _Module object
@@ -163,7 +163,7 @@ class SwitchboardEngine(object):
 
         # And now add all the new/updated client information
         self.devices.update(new_devices)
-        self.clients[client_alias] = _Client(client_url, client_alias, new_devices, poll_period)
+        self.clients[client_alias] = _ClientInfo(client_url, client_alias, new_devices, poll_period)
 
         # Load the initial values
         self._update_devices_values()
@@ -364,7 +364,7 @@ class SwitchboardEngine(object):
 
 
 
-class _Client:
+class _ClientInfo:
     def __init__(self, url, alias, devices, poll_period):
         self.url = url
         self.alias = alias
