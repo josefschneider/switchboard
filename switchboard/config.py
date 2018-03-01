@@ -1,8 +1,11 @@
 
 import os
 import json
+import logging
 
 from switchboard.utils import get_input, is_float
+
+logger = logging.getLogger(__name__)
 
 # Different configuration options together with their attributes:
 # * desc: optional description of the setting
@@ -42,6 +45,11 @@ CONFIG_OPTS = {
             'test': lambda x: isinstance(x, bool),
             'limit': 'a boolean',
             'type': bool
+        },
+        'logging': {
+            'test': lambda x: isinstance(x, dict),
+            'limit': 'a dict',
+            'type': dict
         }
 }
 
@@ -56,7 +64,7 @@ class SwitchboardConfig:
             args = ()
             self.configs[key] = opt['type'](*args)
 
-        # Without poll period set Switchboard can't start
+        # Sets default poll period. Without this value Switchboard can't start
         self.configs['poll_period'] = "1.0"
 
         # One handler may register itself to be updated whenever the
@@ -68,7 +76,7 @@ class SwitchboardConfig:
 
 
     def get(self, key):
-        ''' Get a string config option of name <key>. If no such option
+        ''' Get a config option of name <key>. If no such option
             exists return None '''
 
         if key in self.configs:
@@ -78,10 +86,12 @@ class SwitchboardConfig:
 
 
     def set(self, key, value):
-        ''' Set a string config option of name <key> to <value>. The
-            input value is checked to ensure it meets requirements. If
+        ''' Set a config option of name <key> to <value>. The input
+            value is checked to ensure it meets requirements. If
             successful this functions returns None, otherwise it returns
             an error message '''
+
+        logger.info('Setting config value for "{}" to "{}"'.format(key, value))
 
         if key in self.configs:
             if not CONFIG_OPTS[key]['test'](value):
@@ -142,11 +152,9 @@ class SwitchboardConfig:
         ''' Load the json config file. If it doesn't exist creat one
             through an interactive prompt '''
 
-        print("Loading config...")
         self._config_file = file_name
 
-        # If the config file does not exist start up the interactive
-        # cmd line init function
+        # If the config file does not exist load up store an empty config
         if not os.path.isfile(self._config_file):
             self._save_config()
             return
@@ -184,4 +192,5 @@ class SwitchboardConfig:
             with open(self._config_file, 'w') as cfp:
                 json.dump(self.configs, cfp, indent=4)
 
-        self.config_update_handler()
+        if self.config_update_handler:
+            self.config_update_handler()
