@@ -1,6 +1,7 @@
 
 import json
 import sys
+import logging
 from threading import Thread, Lock
 
 from bottle import Bottle, static_file
@@ -11,6 +12,8 @@ module_path = os.path.dirname(os.path.realpath(__file__))
 
 from switchboard.utils import get_free_port
 from switchboard.command_decoder import CommandDecoder
+
+logger = logging.getLogger(__name__)
 
 
 def _make_state_table(clients):
@@ -63,7 +66,7 @@ class WSCtrlServer:
             self.port = get_free_port()
 
         self._config.set('ws_port', self.port)
-        print('WSCtrlServer server listening on port {}'.format(self.port))
+        logger.info('WSCtrlServer server listening on port {}'.format(self.port))
 
         self._app = Bottle()
         self._app.route('/', method='GET', callback=self._index)

@@ -1,7 +1,11 @@
 
 import json
+import logging
 
 from switchboard.engine import EngineError
+
+logger = logging.getLogger(__name__)
+
 
 class Status:
     FINISHED, CONTINUE, WAITING_FOR_INPUT = range(3)
@@ -152,10 +156,10 @@ class CommandDecoder:
         elif target.lower() in list(self._config_vars.keys()):
             err = self._config.set(target, value)
             if err != None:
-                print('Error: {}'.format(err))
+                logger.error(err)
 
         else:
-            print('Invalid set target "{}"'.format(target))
+            logger.warning('Invalid set target "{}"'.format(target))
             self.help_get()
 
     def start(self, args):

@@ -2,12 +2,15 @@
 
 import cmd
 import sys
+import logging
 
 from switchboard.config import CONFIG_OPTS
 from switchboard.engine import EngineError
 from switchboard.utils import colour_text, get_input, is_float
 
 from apps.app_list import APP_LIST
+
+logger = logging.getLogger(__name__)
 
 
 def AutoComplete(text, line, options):
@@ -461,9 +464,9 @@ class SwitchboardCli(cmd.Cmd, object):
     @lock_switchboard
     def do_stop(self, line):
         if not self._swb.running:
-            self._config.set('running', False)
             print('Switchboard server is not running')
         else:
+            self._config.set('running', False)
             self._swb.running = False
 
 

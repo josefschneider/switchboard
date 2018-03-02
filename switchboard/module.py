@@ -1,9 +1,12 @@
 
 import inspect
+import logging
 from functools import wraps
 
 from switchboard.device import SignalDevice, get_device_suffix
 from switchboard.utils import determine_if_class_method
+
+logger = logging.getLogger(__name__)
 
 
 class ModuleError(Exception):
@@ -101,7 +104,7 @@ class SwitchboardModule:
 
         if not signal_name in device_list:
             if get_device_suffix(signal_name) == 's':
-                print('Creating signal {}'.format(signal_name))
+                logger.info('Creating signal {}'.format(signal_name))
                 signal = SignalDevice(signal_name)
                 device_list.append(signal)
                 return signal
@@ -127,9 +130,8 @@ class SwitchboardModule:
                 # Update the error message in case we go from one error
                 # to another
                 if self.error != previous_error:
-                    msg = 'Disabling module {} due to device {} error: {}'.format(
-                        self.name, device.get_name(), device.get_error())
-                    print('Error: ' + msg)
+                    logger.warning('Disabling module {} due to device {} error: {}'.format(
+                        self.name, device.get_name(), device.get_error()))
 
                 # Set the output error values for the first error
                 if not previous_error:
@@ -138,7 +140,7 @@ class SwitchboardModule:
                 return True
 
         if self.error:
-            print('Error resolved, re-enabling module {}'.format(self.name))
+            logger.info('Error resolved, re-enabling module {}'.format(self.name))
             self.error = None
 
         return False
