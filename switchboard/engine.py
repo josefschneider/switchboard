@@ -72,7 +72,7 @@ class SwitchboardEngine(object):
                 poll_period = client_info['poll_period'] if 'poll_period' in client_info else None
                 self.add_client(client_info['url'], alias, poll_period)
             except Exception as e:
-                prints(sys.exit, 'Error adding client {}({}): {}'.format(client_alias, client_url, e))
+                prints(sys.exit, 'Error adding client {}({}): {}'.format(alias, client_info['url'], e))
 
     def init_modules(self):
         ''' Initialise the switchboard modules according to the config file '''
